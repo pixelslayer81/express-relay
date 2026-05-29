@@ -124,9 +124,9 @@
           showError('sdk.editor.createWithAsset is not a function.\nCheck https://developer.adobe.com/express/embed-sdk/docs/v4/');
           return;
         }
-        // asset must be an array; use data URI so the SDK fetch resolves locally
+        // asset must be a plain object with raw base64 (no data: prefix) and mimeType
         sdk.editor.createWithAsset(
-          { asset: [{ data: 'data:image/png;base64,' + pngBase64, dataType: 'url', type: 'image' }] },
+          { asset: { data: pngBase64, dataType: 'base64', type: 'image', mimeType: 'image/png' } },
           {
             callbacks: {
               onCancel:  function() { clearTimeout(timeout); window.close(); },
