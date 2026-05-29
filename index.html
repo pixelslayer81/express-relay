@@ -55,20 +55,27 @@
       el.style.display = '';
     }
 
-    // Convert SVG base64 → PNG base64 using browser Canvas
-    function svgToPng(svgBase64) {
+    // Convert SVG base64 → JPEG data URI using browser Canvas (capped at 1080px)
+    function svgToJpegDataUri(svgBase64) {
       return new Promise(function(resolve, reject) {
         var img = new Image();
         img.onload = function() {
           var w = img.naturalWidth  || 1080;
           var h = img.naturalHeight || 1080;
+          var maxDim = 1080;
+          if (w > maxDim || h > maxDim) {
+            var scale = maxDim / Math.max(w, h);
+            w = Math.round(w * scale);
+            h = Math.round(h * scale);
+          }
           var canvas = document.createElement('canvas');
           canvas.width  = w;
           canvas.height = h;
           var ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, w, h);
           ctx.drawImage(img, 0, 0, w, h);
-          var dataUrl = canvas.toDataURL('image/png');
-          resolve(dataUrl.split(',')[1]);  // return raw base64 only
+          resolve(canvas.toDataURL('image/jpeg', 0.85)); // full data URI
         };
         img.onerror = function() { reject(new Error('Failed to load SVG into Image element')); };
         img.src = 'data:image/svg+xml;base64,' + svgBase64;
@@ -101,13 +108,13 @@
         return;
       }
 
-      // Convert SVG → PNG via Canvas, then use data URI (no server fetch needed)
-      setStep('Step 3/3: Converting template to PNG…');
-      var pngBase64;
+      // Convert SVG → JPEG data URI via Canvas (capped at 1080px, ~100–200KB)
+      setStep('Step 3/3: Converting template…');
+      var jpegDataUri;
       try {
-        pngBase64 = await svgToPng(hash);
+        jpegDataUri = await svgToJpegDataUri(hash);
       } catch(e) {
-        showError('SVG to PNG conversion failed:\n' + (e && e.message ? e.message : String(e)));
+        showError('SVG conversion failed:\n' + (e && e.message ? e.message : String(e)));
         return;
       }
 
@@ -124,9 +131,9 @@
           showError('sdk.editor.createWithAsset is not a function.\nCheck https://developer.adobe.com/express/embed-sdk/docs/v4/');
           return;
         }
-        // asset must be a plain object with raw base64 (no data: prefix) and mimeType
+        // dataType:'url' with a data URI — the format Adobe's own examples use
         sdk.editor.createWithAsset(
-          { asset: { data: pngBase64, dataType: 'base64', type: 'image', mimeType: 'image/png' } },
+          { asset: { data: jpegDataUri, dataType: 'url', type: 'image' } },
           {
             callbacks: {
               onCancel:  function() { clearTimeout(timeout); window.close(); },
