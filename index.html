@@ -131,9 +131,9 @@
           showError('sdk.editor.createWithAsset is not a function.\nCheck https://developer.adobe.com/express/embed-sdk/docs/v4/');
           return;
         }
-        // dataType:'url' with a data URI — the format Adobe's own examples use
+        // dataType:'base64' with full data URI (prefix included) — per Adobe official docs
         sdk.editor.createWithAsset(
-          { asset: { data: jpegDataUri, dataType: 'url', type: 'image' } },
+          { asset: { data: jpegDataUri, dataType: 'base64', type: 'image', name: 'template.jpg' } },
           {
             callbacks: {
               onCancel:  function() { clearTimeout(timeout); window.close(); },
