@@ -153,25 +153,18 @@
         var jpegBase64 = jpegDataUri.split(',')[1];
         document.getElementById('debugInfo').textContent += ' | mode: base64';
 
-        var assetConfig = { type: 'image', dataType: 'base64', data: jpegBase64, name: 'template.jpg' };
+        // SDK v4 requires asset to be an array
+        var assetItem = { type: 'image', dataType: 'base64', data: jpegBase64, name: 'template.jpg' };
         var callbacks = {
           onCancel:  function() { clearTimeout(timeout); window.close(); },
           onPublish: function() { clearTimeout(timeout); window.close(); },
           onError:   function(err) { clearTimeout(timeout); showError('Express error:\n' + JSON.stringify(err, null, 2)); }
         };
 
-        // Try createWithAsset first; fall back to editImage if available
-        if (typeof sdk.editor.createWithAsset === 'function') {
-          sdk.editor.createWithAsset(
-            { asset: assetConfig },
-            { callbacks: callbacks }
-          );
-        } else if (typeof sdk.editor.editImage === 'function') {
-          sdk.editor.editImage({ asset: assetConfig }, { callbacks: callbacks });
-        } else {
-          clearTimeout(timeout);
-          showError('No supported editor method found.\nAvailable: ' + editorMethods.join(', '));
-        }
+        sdk.editor.createWithAsset(
+          { asset: [assetItem] },
+          { callbacks: callbacks }
+        );
       } catch(e) {
         clearTimeout(timeout);
         showError('Editor call threw:\n' + (e && e.message ? e.message : JSON.stringify(e)));
