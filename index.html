@@ -37,8 +37,10 @@
   </div>
 
   <script>
-    var CLIENT_ID = 'dce1ddeb0fe8427fa6cb76c9814152d3';
-    var APP_NAME  = 'Microsoft Social Templates';
+    var CLIENT_ID              = 'dce1ddeb0fe8427fa6cb76c9814152d3';
+    var APP_NAME               = 'Microsoft Social Templates';
+    var CLOUDINARY_CLOUD_NAME  = 'dluehvgbz';
+    var CLOUDINARY_UPLOAD_PRESET = 'social_templete';
 
     function setStep(msg) { document.getElementById('step').textContent = msg; }
 
@@ -52,7 +54,7 @@
       el.style.display = '';
     }
 
-    // SVG base64 → JPEG data URI via canvas + FileReader (matches Adobe's official example exactly)
+    // SVG base64 → JPEG data URI via canvas
     function svgToJpegDataUri(svgBase64) {
       return new Promise(function(resolve, reject) {
         var img = new Image();
@@ -74,7 +76,7 @@
           canvas.toBlob(function(blob) {
             if (!blob) { reject(new Error('canvas.toBlob returned null')); return; }
             var reader = new FileReader();
-            reader.onloadend = function() { resolve(reader.result); }; // full data URI
+            reader.onloadend = function() { resolve(reader.result); };
             reader.onerror = function() { reject(new Error('FileReader error')); };
             reader.readAsDataURL(blob);
           }, 'image/jpeg', 0.85);
@@ -84,10 +86,37 @@
       });
     }
 
-    async function openInExpress() {
-      setStep('Step 1/3: Checking URL data…');
+    // Upload JPEG data URI to Cloudinary (unsigned), return secure HTTPS URL
+    async function uploadToCloudinary(jpegDataUri) {
+      if (CLOUDINARY_CLOUD_NAME === 'YOUR_CLOUD_NAME') {
+        throw new Error(
+          'Cloudinary not configured.\n\n' +
+          '1. Sign up free at cloudinary.com\n' +
+          '2. Go to Settings → Upload → Add upload preset → set to Unsigned\n' +
+          '3. Replace YOUR_CLOUD_NAME and YOUR_UPLOAD_PRESET in this file\n' +
+          '4. Re-upload index.html to GitHub'
+        );
+      }
+      var formData = new FormData();
+      formData.append('file', jpegDataUri);           // data URI accepted by Cloudinary
+      formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+      formData.append('folder', 'express-relay');
 
-      // decodeURIComponent handles any %2B/%2F encoding added by Figma/OS when opening the URL
+      var response = await fetch(
+        'https://api.cloudinary.com/v1_1/' + CLOUDINARY_CLOUD_NAME + '/image/upload',
+        { method: 'POST', body: formData }
+      );
+      if (!response.ok) {
+        var text = await response.text();
+        throw new Error('Cloudinary upload failed (' + response.status + '): ' + text);
+      }
+      var result = await response.json();
+      return result.secure_url;   // e.g. https://res.cloudinary.com/…/image/upload/…/template.jpg
+    }
+
+    async function openInExpress() {
+      setStep('Step 1/4: Checking URL data…');
+
       var raw = location.hash.slice(1);
       var hash;
       try { hash = decodeURIComponent(raw); } catch(e) { hash = raw; }
@@ -97,7 +126,7 @@
         return;
       }
 
-      setStep('Step 2/3: Converting template to image…');
+      setStep('Step 2/4: Converting template to image…');
       var jpegDataUri;
       try {
         jpegDataUri = await svgToJpegDataUri(hash);
@@ -106,20 +135,30 @@
         return;
       }
 
-      // Show preview to confirm conversion worked
+      // Show preview
       var previewEl = document.getElementById('preview');
       previewEl.src = jpegDataUri;
       previewEl.style.display = 'block';
       var sizeKb = Math.round(jpegDataUri.length * 0.75 / 1024);
       document.getElementById('debugInfo').textContent = 'Preview: ' + sizeKb + ' KB JPEG';
 
-      setStep('Step 3/3: Loading Adobe Express SDK…');
+      setStep('Step 3/4: Uploading to CDN…');
+      var imageUrl;
+      try {
+        imageUrl = await uploadToCloudinary(jpegDataUri);
+        document.getElementById('debugInfo').textContent += ' | CDN: ' + imageUrl.split('/').pop();
+      } catch(e) {
+        showError((e && e.message ? e.message : String(e)));
+        return;
+      }
+
+      setStep('Step 4/4: Loading Adobe Express SDK…');
       if (typeof CCEverywhere === 'undefined') {
         showError('CCEverywhere SDK failed to load.\nCheck that https://cc-embed.adobe.com is reachable.');
         return;
       }
 
-      setStep('Step 3/3: Initializing SDK…');
+      setStep('Step 4/4: Initializing SDK…');
       var sdk;
       try {
         sdk = await CCEverywhere.initialize(
@@ -131,29 +170,13 @@
         return;
       }
 
-      setStep('Step 3/3: Opening Express editor…');
+      setStep('Step 4/4: Opening Express editor…');
       var timeout = setTimeout(function() {
         showError('Adobe Express did not open after 90 seconds.\nCheck browser Console (F12) for details.');
       }, 90000);
 
       try {
-        // Log available editor methods for diagnostics
-        var editorMethods = [];
-        var proto = sdk.editor;
-        while (proto && proto !== Object.prototype) {
-          Object.getOwnPropertyNames(proto).forEach(function(n) {
-            if (typeof sdk.editor[n] === 'function' && editorMethods.indexOf(n) === -1) editorMethods.push(n);
-          });
-          proto = Object.getPrototypeOf(proto);
-        }
-        console.log('[Relay] sdk.editor methods:', editorMethods.join(', '));
-        document.getElementById('debugInfo').textContent += ' | editor: ' + editorMethods.join(', ');
-
-        // Pass the full data URI as a URL — avoids base64 CDN URL limit (414) and
-        // cross-origin blob restrictions. Chrome supports fetching data: URIs.
-        document.getElementById('debugInfo').textContent += ' | mode: url/datauri';
-
-        var assetConfig = { type: 'image', dataType: 'url', data: jpegDataUri, name: 'template.jpg' };
+        var assetConfig = { type: 'image', dataType: 'url', data: imageUrl, name: 'template.jpg' };
         var callbacks = {
           onCancel:  function() { clearTimeout(timeout); window.close(); },
           onPublish: function() { clearTimeout(timeout); window.close(); },
