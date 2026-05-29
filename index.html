@@ -37,10 +37,8 @@
   </div>
 
   <script>
-    var CLIENT_ID              = 'dce1ddeb0fe8427fa6cb76c9814152d3';
-    var APP_NAME               = 'Microsoft Social Templates';
-    var CLOUDINARY_CLOUD_NAME  = 'dluehvgbz';
-    var CLOUDINARY_UPLOAD_PRESET = 'social_templete';
+    var CLIENT_ID = 'dce1ddeb0fe8427fa6cb76c9814152d3';
+    var APP_NAME  = 'Microsoft Social Templates';
 
     function setStep(msg) { document.getElementById('step').textContent = msg; }
 
@@ -73,49 +71,17 @@
           ctx.fillStyle = '#ffffff';
           ctx.fillRect(0, 0, w, h);
           ctx.drawImage(img, 0, 0, w, h);
-          canvas.toBlob(function(blob) {
-            if (!blob) { reject(new Error('canvas.toBlob returned null')); return; }
-            var reader = new FileReader();
-            reader.onloadend = function() { resolve(reader.result); };
-            reader.onerror = function() { reject(new Error('FileReader error')); };
-            reader.readAsDataURL(blob);
-          }, 'image/jpeg', 0.85);
+          // Use toDataURL directly — matches Adobe's official sample pattern exactly
+          var dataUri = canvas.toDataURL('image/jpeg', 0.92);
+          resolve(dataUri);
         };
         img.onerror = function() { reject(new Error('Failed to load SVG into Image element')); };
         img.src = 'data:image/svg+xml;base64,' + svgBase64;
       });
     }
 
-    // Upload JPEG data URI to Cloudinary (unsigned), return secure HTTPS URL
-    async function uploadToCloudinary(jpegDataUri) {
-      if (CLOUDINARY_CLOUD_NAME === 'YOUR_CLOUD_NAME') {
-        throw new Error(
-          'Cloudinary not configured.\n\n' +
-          '1. Sign up free at cloudinary.com\n' +
-          '2. Go to Settings → Upload → Add upload preset → set to Unsigned\n' +
-          '3. Replace YOUR_CLOUD_NAME and YOUR_UPLOAD_PRESET in this file\n' +
-          '4. Re-upload index.html to GitHub'
-        );
-      }
-      var formData = new FormData();
-      formData.append('file', jpegDataUri);           // data URI accepted by Cloudinary
-      formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-      formData.append('folder', 'express-relay');
-
-      var response = await fetch(
-        'https://api.cloudinary.com/v1_1/' + CLOUDINARY_CLOUD_NAME + '/image/upload',
-        { method: 'POST', body: formData }
-      );
-      if (!response.ok) {
-        var text = await response.text();
-        throw new Error('Cloudinary upload failed (' + response.status + '): ' + text);
-      }
-      var result = await response.json();
-      return result.secure_url;   // e.g. https://res.cloudinary.com/…/image/upload/…/template.jpg
-    }
-
     async function openInExpress() {
-      setStep('Step 1/4: Checking URL data…');
+      setStep('Step 1/3: Checking URL data…');
 
       var raw = location.hash.slice(1);
       var hash;
@@ -126,7 +92,7 @@
         return;
       }
 
-      setStep('Step 2/4: Converting template to image…');
+      setStep('Step 2/3: Converting template to image…');
       var jpegDataUri;
       try {
         jpegDataUri = await svgToJpegDataUri(hash);
@@ -142,23 +108,13 @@
       var sizeKb = Math.round(jpegDataUri.length * 0.75 / 1024);
       document.getElementById('debugInfo').textContent = 'Preview: ' + sizeKb + ' KB JPEG';
 
-      setStep('Step 3/4: Uploading to CDN…');
-      var imageUrl;
-      try {
-        imageUrl = await uploadToCloudinary(jpegDataUri);
-        document.getElementById('debugInfo').textContent += ' | CDN: ' + imageUrl.split('/').pop();
-      } catch(e) {
-        showError((e && e.message ? e.message : String(e)));
-        return;
-      }
-
-      setStep('Step 4/4: Loading Adobe Express SDK…');
+      setStep('Step 3/3: Loading Adobe Express SDK…');
       if (typeof CCEverywhere === 'undefined') {
         showError('CCEverywhere SDK failed to load.\nCheck that https://cc-embed.adobe.com is reachable.');
         return;
       }
 
-      setStep('Step 4/4: Initializing SDK…');
+      setStep('Step 3/3: Initializing SDK…');
       var sdk;
       try {
         sdk = await CCEverywhere.initialize(
@@ -170,13 +126,14 @@
         return;
       }
 
-      setStep('Step 4/4: Opening Express editor…');
+      setStep('Step 3/3: Opening Express editor…');
       var timeout = setTimeout(function() {
         showError('Adobe Express did not open after 90 seconds.\nCheck browser Console (F12) for details.');
       }, 90000);
 
       try {
-        var assetConfig = { type: 'image', dataType: 'url', data: imageUrl, name: 'template.jpg' };
+        // Pass the full data URI as data — this is the pattern from Adobe's official v4 sample
+        var assetConfig = { type: 'image', dataType: 'base64', data: jpegDataUri };
         var callbacks = {
           onCancel:  function() { clearTimeout(timeout); window.close(); },
           onPublish: function() { clearTimeout(timeout); window.close(); },
