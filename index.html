@@ -132,17 +132,36 @@
       }, 90000);
 
       try {
-        // Pass the full data URI as data — this is the pattern from Adobe's official v4 sample
+        // Full data URI + exportConfig third param — matches Adobe's official v4 sample exactly
         var assetConfig = { type: 'image', dataType: 'base64', data: jpegDataUri };
         var callbacks = {
           onCancel:  function() { clearTimeout(timeout); window.close(); },
-          onPublish: function() { clearTimeout(timeout); window.close(); },
+          onPublish: function(_intent, publishParams) {
+            clearTimeout(timeout);
+            // Auto-download the exported asset if available
+            if (publishParams && publishParams.asset && publishParams.asset[0]) {
+              var a = document.createElement('a');
+              a.href = publishParams.asset[0].data;
+              a.download = 'template-express.jpg';
+              a.click();
+            }
+            window.close();
+          },
           onError:   function(err) { clearTimeout(timeout); showError('Express error:\n' + JSON.stringify(err, null, 2)); }
         };
+        var exportConfig = [
+          {
+            id: 'download',
+            label: 'Download',
+            action: { target: 'download' },
+            style: { uiType: 'button' }
+          }
+        ];
 
         sdk.editor.createWithAsset(
           { asset: assetConfig },
-          { callbacks: callbacks }
+          { callbacks: callbacks },
+          exportConfig
         );
       } catch(e) {
         clearTimeout(timeout);
