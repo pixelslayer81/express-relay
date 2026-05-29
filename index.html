@@ -133,8 +133,8 @@
 
       setStep('Step 3/3: Opening Express editor…');
       var timeout = setTimeout(function() {
-        showError('Adobe Express did not open after 30 seconds.\nCheck browser Console (F12) for details.');
-      }, 30000);
+        showError('Adobe Express did not open after 90 seconds.\nCheck browser Console (F12) for details.');
+      }, 90000);
 
       try {
         if (!sdk.editor || typeof sdk.editor.createWithAsset !== 'function') {
@@ -142,9 +142,14 @@
           showError('sdk.editor.createWithAsset not available.');
           return;
         }
-        // dataType:'base64' + full data URI — matches Adobe's FileReader-based example exactly
+        // Convert data URI → Blob, pass as dataType:'blob' (opens Express modal)
+        var byteStr = atob(jpegDataUri.split(',')[1]);
+        var arr = new Uint8Array(byteStr.length);
+        for (var i = 0; i < byteStr.length; i++) arr[i] = byteStr.charCodeAt(i);
+        var jpegBlob = new Blob([arr], { type: 'image/jpeg' });
+
         sdk.editor.createWithAsset(
-          { asset: { type: 'image', dataType: 'base64', data: jpegDataUri, name: 'template.jpg' } },
+          { asset: { type: 'image', dataType: 'blob', data: jpegBlob, name: 'template.jpg' } },
           {
             callbacks: {
               onCancel:  function() { clearTimeout(timeout); window.close(); },
