@@ -137,33 +137,44 @@
       }, 90000);
 
       try {
-        if (!sdk.editor || typeof sdk.editor.createWithAsset !== 'function') {
-          clearTimeout(timeout);
-          showError('sdk.editor.createWithAsset not available.');
-          return;
+        // Log available editor methods for diagnostics
+        var editorMethods = [];
+        var proto = sdk.editor;
+        while (proto && proto !== Object.prototype) {
+          Object.getOwnPropertyNames(proto).forEach(function(n) {
+            if (typeof sdk.editor[n] === 'function' && editorMethods.indexOf(n) === -1) editorMethods.push(n);
+          });
+          proto = Object.getPrototypeOf(proto);
         }
-        // Convert data URI → Blob, pass as dataType:'blob' (opens Express modal)
-        var byteStr = atob(jpegDataUri.split(',')[1]);
-        var arr = new Uint8Array(byteStr.length);
-        for (var i = 0; i < byteStr.length; i++) arr[i] = byteStr.charCodeAt(i);
-        var jpegBlob = new Blob([arr], { type: 'image/jpeg' });
+        console.log('[Relay] sdk.editor methods:', editorMethods.join(', '));
+        document.getElementById('debugInfo').textContent += ' | editor: ' + editorMethods.join(', ');
 
-        sdk.editor.createWithAsset(
-          { asset: { type: 'image', dataType: 'blob', data: jpegBlob, name: 'template.jpg' } },
-          {
-            callbacks: {
-              onCancel:  function() { clearTimeout(timeout); window.close(); },
-              onPublish: function() { clearTimeout(timeout); window.close(); },
-              onError:   function(err) {
-                clearTimeout(timeout);
-                showError('Express error:\n' + JSON.stringify(err, null, 2));
-              }
-            }
-          }
-        );
+        // Use raw base64 (no data URI prefix) — SDK transfers via postMessage, no cross-origin fetch
+        var jpegBase64 = jpegDataUri.split(',')[1];
+        document.getElementById('debugInfo').textContent += ' | mode: base64';
+
+        var assetConfig = { type: 'image', dataType: 'base64', data: jpegBase64, name: 'template.jpg' };
+        var callbacks = {
+          onCancel:  function() { clearTimeout(timeout); window.close(); },
+          onPublish: function() { clearTimeout(timeout); window.close(); },
+          onError:   function(err) { clearTimeout(timeout); showError('Express error:\n' + JSON.stringify(err, null, 2)); }
+        };
+
+        // Try createWithAsset first; fall back to editImage if available
+        if (typeof sdk.editor.createWithAsset === 'function') {
+          sdk.editor.createWithAsset(
+            { asset: assetConfig },
+            { callbacks: callbacks }
+          );
+        } else if (typeof sdk.editor.editImage === 'function') {
+          sdk.editor.editImage({ asset: assetConfig }, { callbacks: callbacks });
+        } else {
+          clearTimeout(timeout);
+          showError('No supported editor method found.\nAvailable: ' + editorMethods.join(', '));
+        }
       } catch(e) {
         clearTimeout(timeout);
-        showError('createWithAsset threw:\n' + (e && e.message ? e.message : JSON.stringify(e)));
+        showError('Editor call threw:\n' + (e && e.message ? e.message : JSON.stringify(e)));
       }
     }
 
