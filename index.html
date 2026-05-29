@@ -149,12 +149,11 @@
         console.log('[Relay] sdk.editor methods:', editorMethods.join(', '));
         document.getElementById('debugInfo').textContent += ' | editor: ' + editorMethods.join(', ');
 
-        // Use raw base64 (no data URI prefix) — SDK transfers via postMessage, no cross-origin fetch
-        var jpegBase64 = jpegDataUri.split(',')[1];
-        document.getElementById('debugInfo').textContent += ' | mode: base64';
+        // Pass the full data URI as a URL — avoids base64 CDN URL limit (414) and
+        // cross-origin blob restrictions. Chrome supports fetching data: URIs.
+        document.getElementById('debugInfo').textContent += ' | mode: url/datauri';
 
-        // SDK v4 requires asset to be an array
-        var assetItem = { type: 'image', dataType: 'base64', data: jpegBase64, name: 'template.jpg' };
+        var assetConfig = { type: 'image', dataType: 'url', data: jpegDataUri, name: 'template.jpg' };
         var callbacks = {
           onCancel:  function() { clearTimeout(timeout); window.close(); },
           onPublish: function() { clearTimeout(timeout); window.close(); },
@@ -162,7 +161,7 @@
         };
 
         sdk.editor.createWithAsset(
-          { asset: [assetItem] },
+          { asset: assetConfig },
           { callbacks: callbacks }
         );
       } catch(e) {
