@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Opening in Adobe Express…</title>
+  <title>Open in Adobe Express</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -19,31 +19,43 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     h1 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
     p { font-size: 13px; color: #666; line-height: 1.5; }
-    .error { color: #c50000; font-size: 12px; margin-top: 12px; text-align: left; background: #fff5f5; padding: 10px; border-radius: 6px; white-space: pre-wrap; word-break: break-all; }
     .step { font-size: 11px; color: #999; margin-top: 8px; }
-    #preview { display: none; margin: 12px auto 0; max-width: 200px; border-radius: 6px; border: 1px solid #e0e0e0; }
-    #debugInfo { font-size: 10px; color: #aaa; margin-top: 6px; }
+    #preview { display: none; margin: 16px auto 0; max-width: 220px; border-radius: 8px; border: 1px solid #e0e0e0; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    #openBtn {
+      display: none; margin: 20px auto 0;
+      background: #e31c79; color: #fff; border: none; border-radius: 8px;
+      padding: 12px 28px; font-size: 14px; font-weight: 600; cursor: pointer;
+      font-family: inherit; transition: background 0.15s;
+    }
+    #openBtn:hover { background: #c41569; }
+    #openBtn:disabled { background: #ccc; cursor: default; }
+    .error { color: #c50000; font-size: 12px; margin-top: 12px; text-align: left; background: #fff5f5; padding: 10px; border-radius: 6px; white-space: pre-wrap; word-break: break-all; }
+    #errMsg { display: none; }
   </style>
 </head>
 <body>
   <div class="card">
     <div class="spinner" id="spinner"></div>
-    <h1 id="heading">Opening template in Adobe Express…</h1>
-    <p id="sub">Your Microsoft Social Template is being prepared.</p>
+    <h1 id="heading">Preparing your template…</h1>
+    <p id="sub">Converting for Adobe Express.</p>
     <p class="step" id="step"></p>
     <img id="preview" alt="Template preview" />
-    <p id="debugInfo"></p>
-    <pre class="error" id="errMsg" style="display:none"></pre>
+    <button id="openBtn">Open in Adobe Express</button>
+    <pre class="error" id="errMsg"></pre>
   </div>
 
   <script>
     var CLIENT_ID = 'dce1ddeb0fe8427fa6cb76c9814152d3';
     var APP_NAME  = 'Microsoft Social Templates';
 
+    var jpegDataUri = null;
+    var sdk = null;
+
     function setStep(msg) { document.getElementById('step').textContent = msg; }
 
     function showError(msg) {
       document.getElementById('spinner').style.display = 'none';
+      document.getElementById('openBtn').style.display = 'none';
       document.getElementById('heading').textContent = 'Could not open Express';
       document.getElementById('sub').textContent = 'Please import the downloaded SVG file manually.';
       document.getElementById('step').textContent = '';
@@ -52,7 +64,6 @@
       el.style.display = '';
     }
 
-    // SVG base64 → JPEG data URI via canvas
     function svgToJpegDataUri(svgBase64) {
       return new Promise(function(resolve, reject) {
         var img = new Image();
@@ -71,33 +82,29 @@
           ctx.fillStyle = '#ffffff';
           ctx.fillRect(0, 0, w, h);
           ctx.drawImage(img, 0, 0, w, h);
-          // Use toDataURL directly — matches Adobe's official sample pattern exactly
-          var dataUri = canvas.toDataURL('image/jpeg', 0.92);
-          resolve(dataUri);
+          resolve(canvas.toDataURL('image/jpeg', 0.92));
         };
-        img.onerror = function() { reject(new Error('Failed to load SVG into Image element')); };
+        img.onerror = function() { reject(new Error('Failed to load SVG')); };
         img.src = 'data:image/svg+xml;base64,' + svgBase64;
       });
     }
 
-    async function openInExpress() {
-      setStep('Step 1/3: Checking URL data…');
+    // Prepare: convert SVG + init SDK in background (no user gesture needed yet)
+    async function prepare() {
+      setStep('Converting template…');
 
       var raw = location.hash.slice(1);
       var hash;
       try { hash = decodeURIComponent(raw); } catch(e) { hash = raw; }
-
       if (!hash) {
         showError('No template data in URL.\n\nOpen this page via the Figma plugin "Export + Open in Adobe Express" button.');
         return;
       }
 
-      setStep('Step 2/3: Converting template to image…');
-      var jpegDataUri;
       try {
         jpegDataUri = await svgToJpegDataUri(hash);
       } catch(e) {
-        showError('SVG conversion failed:\n' + (e && e.message ? e.message : String(e)));
+        showError('SVG conversion failed:\n' + e.message);
         return;
       }
 
@@ -105,17 +112,13 @@
       var previewEl = document.getElementById('preview');
       previewEl.src = jpegDataUri;
       previewEl.style.display = 'block';
-      var sizeKb = Math.round(jpegDataUri.length * 0.75 / 1024);
-      document.getElementById('debugInfo').textContent = 'Preview: ' + sizeKb + ' KB JPEG';
 
-      setStep('Step 3/3: Loading Adobe Express SDK…');
+      setStep('Initializing Adobe Express…');
       if (typeof CCEverywhere === 'undefined') {
         showError('CCEverywhere SDK failed to load.\nCheck that https://cc-embed.adobe.com is reachable.');
         return;
       }
 
-      setStep('Step 3/3: Initializing SDK…');
-      var sdk;
       try {
         sdk = await CCEverywhere.initialize(
           { clientId: CLIENT_ID, appName: APP_NAME },
@@ -126,55 +129,61 @@
         return;
       }
 
-      setStep('Step 3/3: Opening Express editor…');
-      var timeout = setTimeout(function() {
-        showError('Adobe Express did not open after 90 seconds.\nCheck browser Console (F12) for details.');
-      }, 90000);
-
-      try {
-        // Full data URI + exportConfig third param — matches Adobe's official v4 sample exactly
-        var assetConfig = { type: 'image', dataType: 'base64', data: jpegDataUri };
-        var callbacks = {
-          onCancel:  function() { clearTimeout(timeout); window.close(); },
-          onPublish: function(_intent, publishParams) {
-            clearTimeout(timeout);
-            // Auto-download the exported asset if available
-            if (publishParams && publishParams.asset && publishParams.asset[0]) {
-              var a = document.createElement('a');
-              a.href = publishParams.asset[0].data;
-              a.download = 'template-express.jpg';
-              a.click();
-            }
-            window.close();
-          },
-          onError:   function(err) { clearTimeout(timeout); showError('Express error:\n' + JSON.stringify(err, null, 2)); }
-        };
-        var exportConfig = [
-          {
-            id: 'download',
-            label: 'Download',
-            action: { target: 'download' },
-            style: { uiType: 'button' }
-          }
-        ];
-
-        sdk.editor.createWithAsset(
-          { asset: assetConfig },
-          { callbacks: callbacks },
-          exportConfig
-        );
-      } catch(e) {
-        clearTimeout(timeout);
-        showError('Editor call threw:\n' + (e && e.message ? e.message : JSON.stringify(e)));
-      }
+      // Ready — show button, hide spinner
+      document.getElementById('spinner').style.display = 'none';
+      document.getElementById('heading').textContent = 'Template ready';
+      document.getElementById('sub').textContent = 'Click below to open and edit in Adobe Express.';
+      document.getElementById('step').textContent = '';
+      document.getElementById('openBtn').style.display = 'block';
     }
 
-    setStep('Loading SDK…');
+    // Open Express — called directly from user click (satisfies user-gesture requirement)
+    document.getElementById('openBtn').addEventListener('click', function() {
+      if (!sdk || !jpegDataUri) return;
+      var btn = document.getElementById('openBtn');
+      btn.disabled = true;
+      btn.textContent = 'Opening…';
+
+      var assetConfig = { type: 'image', dataType: 'base64', data: jpegDataUri };
+      var callbacks = {
+        onCancel:  function() { btn.disabled = false; btn.textContent = 'Open in Adobe Express'; },
+        onPublish: function(_intent, publishParams) {
+          if (publishParams && publishParams.asset && publishParams.asset[0]) {
+            var a = document.createElement('a');
+            a.href = publishParams.asset[0].data;
+            a.download = 'template-express.jpg';
+            a.click();
+          }
+          window.close();
+        },
+        onError: function(err) {
+          btn.disabled = false;
+          btn.textContent = 'Open in Adobe Express';
+          showError('Express error:\n' + JSON.stringify(err, null, 2));
+        }
+      };
+      var exportConfig = [
+        {
+          id: 'download',
+          label: 'Download',
+          action: { target: 'download' },
+          style: { uiType: 'button' }
+        }
+      ];
+
+      sdk.editor.createWithAsset(
+        { asset: assetConfig },
+        { callbacks: callbacks },
+        exportConfig
+      );
+    });
+
+    // Load SDK then prepare
     var script = document.createElement('script');
     script.src = 'https://cc-embed.adobe.com/sdk/v4/CCEverywhere.js';
     script.onload = function() {
-      openInExpress().catch(function(e) {
-        showError('Unexpected error:\n' + (e && e.message ? e.message : String(e)));
+      prepare().catch(function(e) {
+        showError('Unexpected error:\n' + e.message);
       });
     };
     script.onerror = function() {
