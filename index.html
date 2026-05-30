@@ -26,14 +26,16 @@
       background: var(--bg);
       color: var(--ink);
       min-height: 100vh;
+      display: flex;
+      justify-content: center;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
 
     .container {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 0 56px 80px;
+      width: 100%;
+      max-width: 780px;
+      padding: 0 40px 80px;
     }
 
     /* ── Nav ── */
@@ -79,7 +81,7 @@
       padding: 4px 0 48px;
     }
     .hero h1 {
-      font-size: 88px;
+      font-size: 72px;
       font-weight: 800;
       letter-spacing: -3px;
       line-height: 0.93;
@@ -114,12 +116,12 @@
     /* ── Preview row ── */
     .preview-row {
       display: flex;
-      gap: 48px;
+      gap: 40px;
       align-items: flex-start;
     }
     .preview-card {
-      width: 300px;
-      min-height: 300px;
+      width: 260px;
+      min-height: 260px;
       background: #d8d8d8;
       border-radius: 8px;
       overflow: hidden;
@@ -145,25 +147,51 @@
       border-radius: 8px;
     }
 
-    .preview-meta { padding-top: 4px; }
-    #heading {
-      font-size: 22px;
+    /* ── Template metadata ── */
+    .preview-meta { padding-top: 4px; flex: 1; }
+
+    .meta-label {
+      font-size: 9px;
       font-weight: 700;
-      letter-spacing: -0.4px;
-      color: var(--ink);
-      margin-bottom: 10px;
-      line-height: 1.2;
-    }
-    #sub {
-      font-size: 15px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
       color: var(--fg3);
-      line-height: 1.6;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
+
+    .meta-value {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.8px;
+      color: var(--ink);
+      line-height: 1.05;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+    }
+
+    .meta-chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .meta-chip {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--fg3);
+      border: 1px solid var(--stroke);
+      border-radius: 2px;
+      padding: 4px 10px;
+      background: transparent;
+    }
+
     #step {
       font-size: 12px;
       color: #999;
-      margin-top: 6px;
+      margin-top: 10px;
     }
 
     /* ── Export button ── */
@@ -229,8 +257,12 @@
           <img id="preview" alt="Template preview" />
         </div>
         <div class="preview-meta">
-          <p id="heading">Preparing your template…</p>
-          <p id="sub">Converting for Adobe Express.</p>
+          <p class="meta-label">Template type</p>
+          <p class="meta-value" id="metaType">—</p>
+          <div class="meta-chips">
+            <span class="meta-chip" id="metaFormat">—</span>
+            <span class="meta-chip" id="metaMode">—</span>
+          </div>
           <p id="step"></p>
         </div>
       </div>
@@ -252,14 +284,21 @@
     var jpegDataUri = null;
     var sdk = null;
 
+    // Parse URL params
+    var urlParams = new URLSearchParams(location.search);
+    var paramType   = urlParams.get('type')   || '—';
+    var paramFormat = urlParams.get('format') || '—';
+    var paramMode   = urlParams.get('mode')   || '—';
+
+    document.getElementById('metaType').textContent   = paramType;
+    document.getElementById('metaFormat').textContent = paramFormat;
+    document.getElementById('metaMode').textContent   = paramMode;
+
     function setStep(msg) { document.getElementById('step').textContent = msg; }
 
     function showError(msg) {
       document.getElementById('spinner').style.display = 'none';
       document.getElementById('openBtn').style.display = 'none';
-      document.getElementById('heading').textContent = 'Could not open Express';
-      document.getElementById('sub').textContent = 'Please import the downloaded SVG file manually.';
-      document.getElementById('step').textContent = '';
       var el = document.getElementById('errMsg');
       el.textContent = msg;
       el.style.display = '';
@@ -290,7 +329,6 @@
       });
     }
 
-    // Prepare: convert SVG + init SDK in background (no user gesture needed yet)
     async function prepare() {
       setStep('Converting template…');
 
@@ -309,7 +347,6 @@
         return;
       }
 
-      // Show preview
       var previewEl = document.getElementById('preview');
       previewEl.src = jpegDataUri;
       previewEl.style.display = 'block';
@@ -331,14 +368,10 @@
         return;
       }
 
-      // Ready — show button
-      document.getElementById('heading').textContent = 'Template ready.';
-      document.getElementById('sub').textContent = 'Click below to open and edit in Adobe Express.';
       document.getElementById('step').textContent = '';
       document.getElementById('openBtn').style.display = 'block';
     }
 
-    // Open Express — called directly from user click (satisfies user-gesture requirement)
     document.getElementById('openBtn').addEventListener('click', function() {
       if (!sdk || !jpegDataUri) return;
       var btn = document.getElementById('openBtn');
@@ -363,14 +396,7 @@
           showError('Express error:\n' + JSON.stringify(err, null, 2));
         }
       };
-      var exportConfig = [
-        {
-          id: 'download',
-          label: 'Download',
-          action: { target: 'download' },
-          style: { uiType: 'button' }
-        }
-      ];
+      var exportConfig = [{ id: 'download', label: 'Download', action: { target: 'download' }, style: { uiType: 'button' } }];
 
       sdk.editor.createWithAsset(
         { asset: assetConfig },
@@ -379,7 +405,6 @@
       );
     });
 
-    // Load SDK then prepare
     var script = document.createElement('script');
     script.src = 'https://cc-embed.adobe.com/sdk/v4/CCEverywhere.js';
     script.onload = function() {
