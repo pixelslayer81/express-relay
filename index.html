@@ -91,7 +91,7 @@
 
     /* ── Blur state ── */
     .nav, .hero, .section {
-      transition: filter 0.35s ease, opacity 0.35s ease;
+      transition: filter 1.2s ease, opacity 1.2s ease;
     }
     .opening .nav,
     .opening .hero,
@@ -375,12 +375,15 @@
       document.getElementById('openBtn').style.display = 'block';
     }
 
+    document.getElementById('openBtn').addEventListener('mousedown', function() {
+      document.querySelector('.container').classList.add('opening');
+    });
+
     document.getElementById('openBtn').addEventListener('click', function() {
       if (!sdk || !jpegDataUri) return;
       var btn = document.getElementById('openBtn');
       btn.disabled = true;
       btn.textContent = 'Opening…';
-      document.querySelector('.container').classList.add('opening');
 
       var assetConfig = { type: 'image', dataType: 'base64', data: jpegDataUri };
       var callbacks = {
