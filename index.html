@@ -89,6 +89,18 @@
       color: var(--ink);
     }
 
+    /* ── Blur state ── */
+    .nav, .hero, .section {
+      transition: filter 0.35s ease, opacity 0.35s ease;
+    }
+    .opening .nav,
+    .opening .hero,
+    .opening .section {
+      filter: blur(7px);
+      opacity: 0.45;
+      pointer-events: none;
+    }
+
     /* ── Section label ── */
     .section { margin-bottom: 48px; }
     .section-label {
@@ -368,10 +380,11 @@
       var btn = document.getElementById('openBtn');
       btn.disabled = true;
       btn.textContent = 'Opening…';
+      document.querySelector('.container').classList.add('opening');
 
       var assetConfig = { type: 'image', dataType: 'base64', data: jpegDataUri };
       var callbacks = {
-        onCancel:  function() { btn.disabled = false; btn.textContent = 'Open in Adobe Express  →'; },
+        onCancel:  function() { btn.disabled = false; btn.textContent = 'Open in Adobe Express  →'; document.querySelector('.container').classList.remove('opening'); },
         onPublish: function(_intent, publishParams) {
           if (publishParams && publishParams.asset && publishParams.asset[0]) {
             var a = document.createElement('a');
@@ -384,6 +397,7 @@
         onError: function(err) {
           btn.disabled = false;
           btn.textContent = 'Open in Adobe Express  →';
+          document.querySelector('.container').classList.remove('opening');
           showError('Express error:\n' + JSON.stringify(err, null, 2));
         }
       };
