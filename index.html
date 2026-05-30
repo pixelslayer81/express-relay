@@ -23,19 +23,28 @@
 
     body {
       font-family: var(--font);
-      background: var(--bg);
+      background: #dcdcdc;
       color: var(--ink);
       min-height: 100vh;
       display: flex;
       justify-content: center;
+      align-items: flex-start;
+      padding: 40px 24px 60px;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
 
+    .page-card {
+      width: 100%;
+      max-width: 860px;
+      background: var(--bg);
+      border-radius: 14px;
+      box-shadow: 0 6px 48px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06);
+    }
+
     .container {
       width: 100%;
-      max-width: 780px;
-      padding: 250px 40px 80px;
+      padding: 0 56px 72px;
     }
 
     /* ── Nav ── */
@@ -93,9 +102,9 @@
     .nav, .hero, .section {
       transition: filter 2.4s ease, opacity 2.4s ease;
     }
-    .opening .nav,
-    .opening .hero,
-    .opening .section {
+    .container.opening .nav,
+    .container.opening .hero,
+    .container.opening .section {
       filter: blur(7px);
       opacity: 0.45;
     }
@@ -141,6 +150,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      box-shadow: 0 12px 32px rgba(181,55,154,0.18), 0 2px 8px rgba(0,0,0,0.08);
     }
     #spinner {
       width: 36px;
@@ -222,6 +232,7 @@
   </style>
 </head>
 <body>
+  <div class="page-card">
   <div class="container">
 
     <!-- Nav -->
@@ -265,6 +276,7 @@
       <pre id="errMsg"></pre>
     </div>
 
+  </div>
   </div>
 
   <script>
