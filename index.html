@@ -374,12 +374,9 @@
       document.getElementById('openBtn').style.display = 'block';
     }
 
-    document.getElementById('openBtn').addEventListener('mousedown', function() {
-      document.querySelector('.container').classList.add('opening');
-    });
-
     document.getElementById('openBtn').addEventListener('click', function() {
       if (!sdk || !jpegDataUri) return;
+      document.querySelector('.container').classList.add('opening');
       var btn = document.getElementById('openBtn');
       btn.disabled = true;
       btn.textContent = 'Opening…';
