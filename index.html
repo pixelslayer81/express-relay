@@ -35,7 +35,7 @@
     .container {
       width: 100%;
       max-width: 780px;
-      padding: 500px 40px 80px;
+      padding: 250px 40px 80px;
     }
 
     /* ── Nav ── */
@@ -198,7 +198,7 @@
     #openBtn {
       display: none;
       padding: 18px 40px;
-      border: none;
+      border: 2px solid var(--accent);
       border-radius: var(--radius);
       background: rgba(255,255,255,0.95);
       color: var(--accent);
@@ -209,7 +209,8 @@
       cursor: pointer;
       transition: background 0.15s, color 0.15s;
     }
-    #openBtn:hover:not(:disabled) { background: #ffffff; }
+    #openBtn:hover:not(:disabled) { background: var(--accent); color: #fff; }
+    #openBtn:active:not(:disabled) { background: var(--accent); color: #fff; }
     #openBtn:disabled { opacity: 0.45; cursor: default; }
 
     /* ── Error ── */
