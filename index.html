@@ -280,16 +280,17 @@
     var paramFormat = urlParams.get('format') || '';
     var paramMode   = urlParams.get('mode')   || '';
     var paramCta    = urlParams.get('cta')    || '';
+    var paramLayout = urlParams.get('layout') || '';
 
-    // "Text Only" → "Text-only layout."
+    // "Text Only" → "Text-only layout."  |  "Image + Text" → "Image + text layout."
     var typeDisplay = paramType
-      ? paramType.replace(/\s+/g, '-').replace(/-([A-Z])/g, function(m, c) { return '-' + c.toLowerCase(); })
-          .replace(/^(.)/, function(m, c) { return c.toUpperCase(); }) + ' layout.'
+      ? paramType.charAt(0).toUpperCase() + paramType.slice(1).toLowerCase() + ' layout.'
       : '—';
     // Format → dimensions
     var dimsMap = { '1:1': '1080 × 1080', '4:5': '1080 × 1350', '16:9': '1920 × 1080' };
     var dims = dimsMap[paramFormat] || paramFormat;
-    var dimsLine = dims + (paramMode ? ' · ' + paramMode + ' mode' : '');
+    // Sub-layout · dims · mode
+    var dimsLine = (paramLayout ? paramLayout + ' · ' : '') + dims + (paramMode ? ' · ' + paramMode + ' mode' : '');
     var ctaLine  = paramCta ? 'CTA button ' + paramCta : '';
 
     document.getElementById('metaType').textContent = typeDisplay;
