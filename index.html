@@ -148,44 +148,26 @@
     }
 
     /* ── Template metadata ── */
-    .preview-meta { padding-top: 4px; flex: 1; }
-
-    .meta-label {
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--fg3);
-      margin-bottom: 6px;
+    .preview-meta {
+      flex: 1;
+      padding: 6px 0 6px 20px;
+      border-left: 3px solid var(--accent);
     }
 
     .meta-value {
-      font-size: 28px;
-      font-weight: 800;
-      letter-spacing: -0.8px;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
       color: var(--ink);
-      line-height: 1.05;
-      margin-bottom: 20px;
-      text-transform: uppercase;
-    }
-
-    .meta-chips {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
+      line-height: 1.2;
       margin-bottom: 8px;
     }
 
-    .meta-chip {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
+    .meta-sub {
+      font-size: 15px;
+      font-weight: 400;
       color: var(--fg3);
-      border: 1px solid var(--stroke);
-      border-radius: 2px;
-      padding: 4px 10px;
-      background: transparent;
+      line-height: 1.6;
     }
 
     #step {
@@ -258,12 +240,9 @@
           <img id="preview" alt="Template preview" />
         </div>
         <div class="preview-meta">
-          <p class="meta-label">Template type</p>
           <p class="meta-value" id="metaType">—</p>
-          <div class="meta-chips">
-            <span class="meta-chip" id="metaFormat">—</span>
-            <span class="meta-chip" id="metaMode">—</span>
-          </div>
+          <p class="meta-sub" id="metaDims">—</p>
+          <p class="meta-sub" id="metaCta">—</p>
           <p id="step"></p>
         </div>
       </div>
@@ -287,13 +266,25 @@
 
     // Parse URL params
     var urlParams = new URLSearchParams(location.search);
-    var paramType   = urlParams.get('type')   || '—';
-    var paramFormat = urlParams.get('format') || '—';
-    var paramMode   = urlParams.get('mode')   || '—';
+    var paramType   = urlParams.get('type')   || '';
+    var paramFormat = urlParams.get('format') || '';
+    var paramMode   = urlParams.get('mode')   || '';
+    var paramCta    = urlParams.get('cta')    || '';
 
-    document.getElementById('metaType').textContent   = paramType;
-    document.getElementById('metaFormat').textContent = paramFormat;
-    document.getElementById('metaMode').textContent   = paramMode;
+    // "Text Only" → "Text-only layout."
+    var typeDisplay = paramType
+      ? paramType.replace(/\s+/g, '-').replace(/-([A-Z])/g, function(m, c) { return '-' + c.toLowerCase(); })
+          .replace(/^(.)/, function(m, c) { return c.toUpperCase(); }) + ' layout.'
+      : '—';
+    // Format → dimensions
+    var dimsMap = { '1:1': '1080 × 1080', '4:5': '1080 × 1350', '16:9': '1920 × 1080' };
+    var dims = dimsMap[paramFormat] || paramFormat;
+    var dimsLine = dims + (paramMode ? ' · ' + paramMode + ' mode' : '');
+    var ctaLine  = paramCta ? 'CTA button ' + paramCta : '';
+
+    document.getElementById('metaType').textContent = typeDisplay;
+    document.getElementById('metaDims').textContent = dimsLine;
+    document.getElementById('metaCta').textContent  = ctaLine;
 
     function setStep(msg) { document.getElementById('step').textContent = msg; }
 
