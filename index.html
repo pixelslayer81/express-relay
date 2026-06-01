@@ -317,13 +317,30 @@
         return;
       }
 
-      // Build SVG data URI — used for both preview and createWithAsset
+      // SVG data URI — used for createWithAsset
       svgDataUri = 'data:image/svg+xml;base64,' + hash;
 
+      // Render SVG → canvas → PNG for preview (avoids GPU layer that blocks CSS blur)
       var previewEl = document.getElementById('preview');
-      previewEl.src = svgDataUri;
-      previewEl.style.display = 'block';
-      document.getElementById('spinner').style.display = 'none';
+      var svgImg = new Image();
+      svgImg.onload = function() {
+        var w = svgImg.naturalWidth  || 1080;
+        var h = svgImg.naturalHeight || 1080;
+        var scale = Math.min(1, 520 / Math.max(w, h));
+        var canvas = document.createElement('canvas');
+        canvas.width  = Math.round(w * scale);
+        canvas.height = Math.round(h * scale);
+        canvas.getContext('2d').drawImage(svgImg, 0, 0, canvas.width, canvas.height);
+        previewEl.src = canvas.toDataURL('image/png');
+        previewEl.style.display = 'block';
+        document.getElementById('spinner').style.display = 'none';
+      };
+      svgImg.onerror = function() {
+        previewEl.src = svgDataUri;
+        previewEl.style.display = 'block';
+        document.getElementById('spinner').style.display = 'none';
+      };
+      svgImg.src = svgDataUri;
 
       setStep('Initializing Adobe Express…');
       if (typeof CCEverywhere === 'undefined') {
