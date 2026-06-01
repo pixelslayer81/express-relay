@@ -271,7 +271,7 @@
     var CLIENT_ID = 'ec9582dbc1ec4f089f0cba29bc26c401';
     var APP_NAME  = 'Microsoft Social Templates';
 
-    var jpegDataUri = null;
+    var svgDataUri = null;
     var sdk = null;
 
     // Parse URL params
@@ -306,33 +306,8 @@
       el.style.display = '';
     }
 
-    function svgToJpegDataUri(svgBase64) {
-      return new Promise(function(resolve, reject) {
-        var img = new Image();
-        img.onload = function() {
-          var w = img.naturalWidth  || 1080;
-          var h = img.naturalHeight || 1080;
-          var maxDim = 1080;
-          if (w > maxDim || h > maxDim) {
-            var scale = maxDim / Math.max(w, h);
-            w = Math.round(w * scale);
-            h = Math.round(h * scale);
-          }
-          var canvas = document.createElement('canvas');
-          canvas.width = w; canvas.height = h;
-          var ctx = canvas.getContext('2d');
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, w, h);
-          ctx.drawImage(img, 0, 0, w, h);
-          resolve(canvas.toDataURL('image/jpeg', 0.92));
-        };
-        img.onerror = function() { reject(new Error('Failed to load SVG')); };
-        img.src = 'data:image/svg+xml;base64,' + svgBase64;
-      });
-    }
-
     async function prepare() {
-      setStep('Converting template…');
+      setStep('Loading template…');
 
       var raw = location.hash.slice(1);
       var hash;
@@ -342,15 +317,11 @@
         return;
       }
 
-      try {
-        jpegDataUri = await svgToJpegDataUri(hash);
-      } catch(e) {
-        showError('SVG conversion failed:\n' + e.message);
-        return;
-      }
+      // Build SVG data URI — used for both preview and createWithAsset
+      svgDataUri = 'data:image/svg+xml;base64,' + hash;
 
       var previewEl = document.getElementById('preview');
-      previewEl.src = jpegDataUri;
+      previewEl.src = svgDataUri;
       previewEl.style.display = 'block';
       document.getElementById('spinner').style.display = 'none';
 
@@ -375,13 +346,13 @@
     }
 
     document.getElementById('openBtn').addEventListener('click', function() {
-      if (!sdk || !jpegDataUri) return;
+      if (!sdk || !svgDataUri) return;
       document.querySelector('.container').classList.add('opening');
       var btn = document.getElementById('openBtn');
       btn.disabled = true;
       btn.textContent = 'Opening…';
 
-      var assetConfig = { type: 'image', dataType: 'base64', data: jpegDataUri };
+      var assetConfig = { type: 'image', dataType: 'base64', data: svgDataUri };
       var callbacks = {
         onCancel:  function() { btn.disabled = false; btn.textContent = 'Open in Adobe Express  →'; document.querySelector('.container').classList.remove('opening'); },
         onPublish: function(_intent, publishParams) {
