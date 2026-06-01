@@ -95,14 +95,16 @@
       inset: 0;
       z-index: 9999;
       pointer-events: none;
-      backdrop-filter: blur(7px);
-      -webkit-backdrop-filter: blur(7px);
-      background: rgba(250,250,250,0.45);
+      background: rgba(250,250,250,0.55);
       opacity: 0;
       transition: opacity 2.4s ease;
+      transform: translateZ(0);
     }
     #blur-overlay.active {
       opacity: 1;
+    }
+    .preview-card {
+      will-change: filter;
     }
 
     /* ── Section label ── */
@@ -357,8 +359,9 @@
         var el = document.querySelector(sel);
         if (!el) return;
         el.style.transition = 'filter 2.4s ease, opacity 2.4s ease';
-        el.style.filter = 'blur(7px)';
-        el.style.opacity = '0.45';
+        el.style.filter = 'blur(8px)';
+        el.style.opacity = '0.4';
+        el.style.willChange = 'filter';
       });
     }
     function unblurPage() {
