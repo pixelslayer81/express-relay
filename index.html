@@ -272,6 +272,7 @@
     var APP_NAME  = 'Microsoft Social Templates';
 
     var svgDataUri = null;
+    var svgBase64  = null;   // raw base64, no data URI prefix — for createWithAsset
     var sdk = null;
 
     // Parse URL params
@@ -289,6 +290,9 @@
     // Format → dimensions
     var dimsMap = { '1:1': '1080 × 1080', '4:5': '1080 × 1350', '16:9': '1920 × 1080' };
     var dims = dimsMap[paramFormat] || paramFormat;
+    // Canvas pixel dimensions for createWithAsset inputParams
+    var canvasDimsMap = { '1:1': { width: 1080, height: 1080 }, '4:5': { width: 1080, height: 1350 }, '16:9': { width: 1920, height: 1080 } };
+    var canvasDims = canvasDimsMap[paramFormat] || { width: 1080, height: 1080 };
     // Sub-layout · dims · mode
     var dimsLine = (paramLayout ? paramLayout + ' · ' : '') + dims + (paramMode ? ' · ' + paramMode + ' mode' : '');
     var ctaLine  = paramCta ? 'CTA button ' + paramCta : '';
@@ -317,7 +321,8 @@
         return;
       }
 
-      // SVG data URI — used for createWithAsset
+      // Store raw base64 for createWithAsset; data URI only for preview fallback
+      svgBase64  = hash;
       svgDataUri = 'data:image/svg+xml;base64,' + hash;
 
       // Render SVG → canvas → PNG for preview (avoids GPU layer that blocks CSS blur)
@@ -363,13 +368,13 @@
     }
 
     document.getElementById('openBtn').addEventListener('click', function() {
-      if (!sdk || !svgDataUri) return;
+      if (!sdk || !svgBase64) return;
       document.querySelector('.container').classList.add('opening');
       var btn = document.getElementById('openBtn');
       btn.disabled = true;
       btn.textContent = 'Opening…';
 
-      var assetConfig = { type: 'image', dataType: 'base64', data: svgDataUri };
+      var assetConfig = { type: 'image', dataType: 'base64', data: svgBase64 };
       var callbacks = {
         onCancel:  function() { btn.disabled = false; btn.textContent = 'Open in Adobe Express  →'; document.querySelector('.container').classList.remove('opening'); },
         onPublish: function(_intent, publishParams) {
@@ -392,7 +397,7 @@
 
       sdk.editor.createWithAsset(
         { asset: assetConfig },
-        { callbacks: callbacks },
+        { callbacks: callbacks, inputParams: { canvasSize: canvasDims } },
         exportConfig
       );
     });
