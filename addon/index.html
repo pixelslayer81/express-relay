@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Microsoft Social Templates</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #f4f4f4;
+      color: #1a1a1a;
+      font-size: 13px;
+      padding: 16px;
+      min-height: 100vh;
+    }
+
+    h2 {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #555;
+      margin-bottom: 12px;
+    }
+
+    .section { margin-bottom: 20px; }
+
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #666;
+      margin-bottom: 6px;
+    }
+
+    select, input[type="text"] {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #d0d0d0;
+      border-radius: 4px;
+      background: #fff;
+      font-size: 13px;
+      color: #1a1a1a;
+      outline: none;
+    }
+    select:focus, input[type="text"]:focus {
+      border-color: #b5379a;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn:disabled { opacity: 0.45; cursor: default; }
+    .btn-primary {
+      background: #b5379a;
+      color: #fff;
+    }
+    .btn-primary:hover:not(:disabled) { background: #9e2d85; }
+
+    #status {
+      margin-top: 12px;
+      font-size: 12px;
+      color: #555;
+      min-height: 18px;
+      text-align: center;
+    }
+    #status.error { color: #c00; }
+    #status.success { color: #107c10; }
+
+    .divider {
+      height: 1px;
+      background: #ddd;
+      margin: 16px 0;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #b5379a;
+      border: 1px solid #b5379a;
+      border-radius: 3px;
+      padding: 2px 6px;
+      margin-bottom: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="badge">Microsoft / Social</div>
+
+  <!-- Template config -->
+  <div class="section">
+    <label>Template type</label>
+    <select id="selType">
+      <option value="text-only">Text Only</option>
+      <option value="text-image">Image + Text</option>
+    </select>
+  </div>
+
+  <div class="section">
+    <label>Format</label>
+    <select id="selFormat">
+      <option value="1:1">Square — 1080 × 1080</option>
+      <option value="4:5">Portrait — 1080 × 1350</option>
+      <option value="16:9">Landscape — 1920 × 1080</option>
+    </select>
+  </div>
+
+  <div class="section">
+    <label>Color mode</label>
+    <select id="selMode">
+      <option value="light">Light</option>
+      <option value="dark">Dark</option>
+    </select>
+  </div>
+
+  <div class="section">
+    <label>Headline</label>
+    <input type="text" id="inputHeadline" value="Your headline goes here" />
+  </div>
+
+  <div class="section">
+    <label>Body text</label>
+    <input type="text" id="inputBody" value="Supporting message or detail." />
+  </div>
+
+  <div class="divider"></div>
+
+  <button class="btn btn-primary" id="btnCreate">Create Template in Express →</button>
+  <div id="status"></div>
+
+  <script src="https://new.express.adobe.com/static/add-on-sdk/sdk.js"></script>
+  <script>
+
+    var sandboxProxy = null;
+
+    AddOnSdk.ready.then(async () => {
+      try {
+        sandboxProxy = await AddOnSdk.instance.runtime.apiProxy("documentSandbox");
+        setStatus("Ready.", "");
+      } catch (e) {
+        setStatus("Failed to connect to document sandbox: " + e.message, "error");
+      }
+    });
+
+    function setStatus(msg, cls) {
+      var el = document.getElementById("status");
+      el.textContent = msg;
+      el.className = cls || "";
+    }
+
+    document.getElementById("btnCreate").addEventListener("click", async () => {
+      if (!sandboxProxy) {
+        setStatus("Sandbox not ready.", "error");
+        return;
+      }
+
+      var btn = document.getElementById("btnCreate");
+      btn.disabled = true;
+      setStatus("Building template…", "");
+
+      var typeVal    = document.getElementById("selType").value;
+      var formatVal  = document.getElementById("selFormat").value;
+      var modeVal    = document.getElementById("selMode").value;
+      var headline   = document.getElementById("inputHeadline").value.trim() || "Your headline goes here";
+      var body       = document.getElementById("inputBody").value.trim() || "Supporting message or detail.";
+
+      try {
+        await sandboxProxy.createTemplate({ type: typeVal, format: formatVal, mode: modeVal, headline, body });
+        setStatus("Template created — layers are fully editable.", "success");
+      } catch (e) {
+        setStatus("Error: " + e.message, "error");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

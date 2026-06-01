@@ -1,0 +1,25 @@
+{
+  "testId": "microsoft-social-templates-addon",
+  "name": "Microsoft Social Templates",
+  "version": "1.0.0",
+  "manifestVersion": 2,
+  "requirements": {
+    "apps": [
+      {
+        "name": "Express",
+        "apiVersion": 2
+      }
+    ]
+  },
+  "entryPoints": [
+    {
+      "type": "panel",
+      "id": "panel1",
+      "main": "index.html",
+      "documentSandbox": "code.js",
+      "permissions": {
+        "sandbox": []
+      }
+    }
+  ]
+}
