@@ -322,24 +322,8 @@
         return;
       }
 
-      // Strip width/height from SVG root so Express scales it to fill the canvas
-      // (keeping viewBox preserves aspect ratio; explicit px dimensions confuse Express sizing)
-      var processedBase64 = hash;
-      try {
-        var svgText = atob(hash);
-        var parser  = new DOMParser();
-        var svgDoc  = parser.parseFromString(svgText, 'image/svg+xml');
-        var svgEl   = svgDoc.documentElement;
-        if (svgEl && svgEl.tagName.toLowerCase() === 'svg') {
-          svgEl.removeAttribute('width');
-          svgEl.removeAttribute('height');
-          var modSvg = new XMLSerializer().serializeToString(svgDoc);
-          processedBase64 = btoa(unescape(encodeURIComponent(modSvg)));
-        }
-      } catch(e) { /* use original hash on any parse error */ }
-
-      svgBase64  = processedBase64;
-      svgDataUri = 'data:image/svg+xml;base64,' + hash; // preview uses original (has explicit dims for correct aspect ratio)
+      svgBase64  = hash;
+      svgDataUri = 'data:image/svg+xml;base64,' + hash;
 
       // Render SVG → canvas → PNG for preview (avoids GPU layer that blocks CSS blur)
       var previewEl = document.getElementById('preview');
@@ -421,11 +405,21 @@
       };
       var exportConfig = [{ id: 'download', label: 'Download', action: { target: 'download' }, style: { uiType: 'button' } }];
 
-      sdk.editor.createWithAsset(
-        { asset: assetConfig, canvasSize: { width: canvasDims.width, height: canvasDims.height, unit: 'px' } },
-        { callbacks: callbacks },
-        exportConfig
-      );
+      // Use module.editImage — opens Express with the image as the subject (fills the editor)
+      // Fallback to editor.createWithAsset if module API is unavailable
+      if (sdk.module && typeof sdk.module.editImage === 'function') {
+        sdk.module.editImage(
+          { asset: assetConfig },
+          { callbacks: callbacks },
+          exportConfig
+        );
+      } else {
+        sdk.editor.createWithAsset(
+          { asset: assetConfig },
+          { callbacks: callbacks },
+          exportConfig
+        );
+      }
     });
 
     var script = document.createElement('script');
