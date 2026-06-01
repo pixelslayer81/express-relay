@@ -322,8 +322,31 @@
         return;
       }
 
-      svgBase64  = hash;
-      svgDataUri = 'data:image/svg+xml;base64,' + hash;
+      // Express operates at 300dpi internally. SVG width/height in CSS pixels (96dpi) cause the
+      // template to appear at 1080/3375 ≈ 32% of the canvas. Fix: set dimensions in physical inches
+      // so Express creates a canvas at the correct physical size and the viewBox fills it.
+      var processedBase64 = hash;
+      try {
+        var svgText = atob(hash);
+        var parser  = new DOMParser();
+        var svgDoc  = parser.parseFromString(svgText, 'image/svg+xml');
+        var svgEl   = svgDoc.documentElement;
+        if (svgEl && svgEl.tagName.toLowerCase() === 'svg') {
+          var pxW = canvasDims.width;
+          var pxH = canvasDims.height;
+          // 1 CSS pixel = 1/96 inch
+          svgEl.setAttribute('width',  (pxW / 96).toFixed(6) + 'in');
+          svgEl.setAttribute('height', (pxH / 96).toFixed(6) + 'in');
+          if (!svgEl.getAttribute('viewBox')) {
+            svgEl.setAttribute('viewBox', '0 0 ' + pxW + ' ' + pxH);
+          }
+          var modSvg = new XMLSerializer().serializeToString(svgDoc);
+          processedBase64 = btoa(unescape(encodeURIComponent(modSvg)));
+        }
+      } catch(e) { /* use original hash on parse error */ }
+
+      svgBase64  = processedBase64;
+      svgDataUri = 'data:image/svg+xml;base64,' + hash; // preview uses original px dims
 
       // Render SVG → canvas → PNG for preview (avoids GPU layer that blocks CSS blur)
       var previewEl = document.getElementById('preview');
@@ -405,21 +428,11 @@
       };
       var exportConfig = [{ id: 'download', label: 'Download', action: { target: 'download' }, style: { uiType: 'button' } }];
 
-      // Use module.editImage — opens Express with the image as the subject (fills the editor)
-      // Fallback to editor.createWithAsset if module API is unavailable
-      if (sdk.module && typeof sdk.module.editImage === 'function') {
-        sdk.module.editImage(
-          { asset: assetConfig },
-          { callbacks: callbacks },
-          exportConfig
-        );
-      } else {
-        sdk.editor.createWithAsset(
-          { asset: assetConfig },
-          { callbacks: callbacks },
-          exportConfig
-        );
-      }
+      sdk.editor.createWithAsset(
+        { asset: assetConfig },
+        { callbacks: callbacks },
+        exportConfig
+      );
     });
 
     var script = document.createElement('script');
