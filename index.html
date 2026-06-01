@@ -396,8 +396,8 @@
       var exportConfig = [{ id: 'download', label: 'Download', action: { target: 'download' }, style: { uiType: 'button' } }];
 
       sdk.editor.createWithAsset(
-        { asset: assetConfig },
-        { callbacks: callbacks, inputParams: { canvasSize: canvasDims } },
+        { asset: assetConfig, canvasSize: { width: canvasDims.width, height: canvasDims.height, unit: 'px' } },
+        { callbacks: callbacks },
         exportConfig
       );
     });
