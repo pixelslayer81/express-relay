@@ -322,10 +322,24 @@
         return;
       }
 
-      // Auto-detect PNG vs SVG from base64 prefix (PNG magic bytes → base64 starts with iVBOR)
-      var mime = hash.startsWith('iVBORw0KGgo') ? 'image/png' : 'image/svg+xml';
-      svgBase64  = hash;
-      svgDataUri = 'data:' + mime + ';base64,' + hash;
+      // Strip width/height from SVG root so Express scales it to fill the canvas
+      // (keeping viewBox preserves aspect ratio; explicit px dimensions confuse Express sizing)
+      var processedBase64 = hash;
+      try {
+        var svgText = atob(hash);
+        var parser  = new DOMParser();
+        var svgDoc  = parser.parseFromString(svgText, 'image/svg+xml');
+        var svgEl   = svgDoc.documentElement;
+        if (svgEl && svgEl.tagName.toLowerCase() === 'svg') {
+          svgEl.removeAttribute('width');
+          svgEl.removeAttribute('height');
+          var modSvg = new XMLSerializer().serializeToString(svgDoc);
+          processedBase64 = btoa(unescape(encodeURIComponent(modSvg)));
+        }
+      } catch(e) { /* use original hash on any parse error */ }
+
+      svgBase64  = processedBase64;
+      svgDataUri = 'data:image/svg+xml;base64,' + hash; // preview uses original (has explicit dims for correct aspect ratio)
 
       // Render SVG → canvas → PNG for preview (avoids GPU layer that blocks CSS blur)
       var previewEl = document.getElementById('preview');
