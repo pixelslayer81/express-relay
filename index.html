@@ -95,7 +95,7 @@
     }
     .opening .nav,
     .opening .hero,
-    .opening .section {
+    .opening .section:first-of-type {
       filter: blur(7px);
       opacity: 0.45;
     }
@@ -271,8 +271,7 @@
     var CLIENT_ID = 'ec9582dbc1ec4f089f0cba29bc26c401';
     var APP_NAME  = 'Microsoft Social Templates';
 
-    var jpegDataUri = null;  // preview only
-    var svgBase64   = null;  // passed to createWithAsset — preserves layers + editable text
+    var jpegDataUri = null;
     var sdk = null;
 
     // Parse URL params
@@ -302,7 +301,6 @@
 
     function showError(msg) {
       document.getElementById('spinner').style.display = 'none';
-      document.getElementById('openBtn').style.display = 'none';
       var el = document.getElementById('errMsg');
       el.textContent = msg;
       el.style.display = '';
@@ -344,10 +342,6 @@
         return;
       }
 
-      // Store original SVG for Express — preserves text layers and editability
-      svgBase64 = hash;
-
-      // Convert to JPEG for preview thumbnail only
       try {
         jpegDataUri = await svgToJpegDataUri(hash);
       } catch(e) {
@@ -381,14 +375,13 @@
     }
 
     document.getElementById('openBtn').addEventListener('click', function() {
-      if (!sdk || !svgBase64) return;
+      if (!sdk || !jpegDataUri) return;
       document.querySelector('.container').classList.add('opening');
       var btn = document.getElementById('openBtn');
       btn.disabled = true;
       btn.textContent = 'Opening…';
 
-      // Pass SVG directly — preserves text layers and editability in Adobe Express
-      var assetConfig = { type: 'image', dataType: 'base64', data: svgBase64 };
+      var assetConfig = { type: 'image', dataType: 'base64', data: jpegDataUri };
       var callbacks = {
         onCancel:  function() { btn.disabled = false; btn.textContent = 'Open in Adobe Express  →'; document.querySelector('.container').classList.remove('opening'); },
         onPublish: function(_intent, publishParams) {
