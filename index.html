@@ -351,16 +351,30 @@
       document.getElementById('openBtn').style.display = 'block';
     }
 
+    function blurPage() {
+      document.getElementById('blur-overlay').classList.add('active');
+      var pc = document.querySelector('.preview-card');
+      pc.style.transition = 'filter 2.4s ease, opacity 2.4s ease';
+      pc.style.filter = 'blur(7px)';
+      pc.style.opacity = '0.45';
+    }
+    function unblurPage() {
+      document.getElementById('blur-overlay').classList.remove('active');
+      var pc = document.querySelector('.preview-card');
+      pc.style.filter = '';
+      pc.style.opacity = '';
+    }
+
     document.getElementById('openBtn').addEventListener('click', function() {
       if (!sdk || !svgDataUri) return;
-      document.getElementById('blur-overlay').classList.add('active');
+      blurPage();
       var btn = document.getElementById('openBtn');
       btn.disabled = true;
       btn.textContent = 'Opening…';
 
       var assetConfig = { type: 'image', dataType: 'base64', data: svgDataUri };
       var callbacks = {
-        onCancel:  function() { btn.disabled = false; btn.textContent = 'Open in Adobe Express  →'; document.getElementById('blur-overlay').classList.remove('active'); },
+        onCancel:  function() { btn.disabled = false; btn.textContent = 'Open in Adobe Express  →'; unblurPage(); },
         onPublish: function(_intent, publishParams) {
           if (publishParams && publishParams.asset && publishParams.asset[0]) {
             var a = document.createElement('a');
@@ -373,7 +387,7 @@
         onError: function(err) {
           btn.disabled = false;
           btn.textContent = 'Open in Adobe Express  →';
-          document.getElementById('blur-overlay').classList.remove('active');
+          unblurPage();
           showError('Express error:\n' + JSON.stringify(err, null, 2));
         }
       };
