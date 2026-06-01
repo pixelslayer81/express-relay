@@ -322,9 +322,10 @@
         return;
       }
 
-      // Express operates at 300dpi internally. SVG width/height in CSS pixels (96dpi) cause the
-      // template to appear at 1080/3375 ≈ 32% of the canvas. Fix: set dimensions in physical inches
-      // so Express creates a canvas at the correct physical size and the viewBox fills it.
+      // Express operates at 300dpi internally; CSS pixels are at 96dpi.
+      // Image at 1080 CSS px appears at 1080/(1080 × 300/96) = 32% of canvas.
+      // Fix: scale SVG width/height by 300/96 so the image is in Express-native units.
+      // ViewBox stays at original px dims so content fills correctly.
       var processedBase64 = hash;
       try {
         var svgText = atob(hash);
@@ -334,9 +335,9 @@
         if (svgEl && svgEl.tagName.toLowerCase() === 'svg') {
           var pxW = canvasDims.width;
           var pxH = canvasDims.height;
-          // 1 CSS pixel = 1/96 inch
-          svgEl.setAttribute('width',  (pxW / 96).toFixed(6) + 'in');
-          svgEl.setAttribute('height', (pxH / 96).toFixed(6) + 'in');
+          // Scale to Express's 300dpi space from CSS 96dpi
+          svgEl.setAttribute('width',  String(Math.round(pxW * 300 / 96)));
+          svgEl.setAttribute('height', String(Math.round(pxH * 300 / 96)));
           if (!svgEl.getAttribute('viewBox')) {
             svgEl.setAttribute('viewBox', '0 0 ' + pxW + ' ' + pxH);
           }
@@ -428,8 +429,10 @@
       };
       var exportConfig = [{ id: 'download', label: 'Download', action: { target: 'download' }, style: { uiType: 'button' } }];
 
+      var exW = Math.round(canvasDims.width  * 300 / 96);
+      var exH = Math.round(canvasDims.height * 300 / 96);
       sdk.editor.createWithAsset(
-        { asset: assetConfig },
+        { asset: assetConfig, canvasSize: { width: exW, height: exH, unit: 'px' } },
         { callbacks: callbacks },
         exportConfig
       );
