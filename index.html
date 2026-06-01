@@ -155,7 +155,8 @@
       display: none;
       width: 100%;
       height: auto;
-      border-radius: 8px;
+      /* no border-radius — parent .preview-card clips it; border-radius on <img> triggers GPU layer promotion which breaks parent filter:blur */
+      transition: filter 2.4s ease, opacity 2.4s ease;
     }
 
     /* ── Template metadata ── */
@@ -321,9 +322,10 @@
         return;
       }
 
-      // Store raw base64 for createWithAsset; data URI only for preview fallback
+      // Auto-detect PNG vs SVG from base64 prefix (PNG magic bytes → base64 starts with iVBOR)
+      var mime = hash.startsWith('iVBORw0KGgo') ? 'image/png' : 'image/svg+xml';
       svgBase64  = hash;
-      svgDataUri = 'data:image/svg+xml;base64,' + hash;
+      svgDataUri = 'data:' + mime + ';base64,' + hash;
 
       // Render SVG → canvas → PNG for preview (avoids GPU layer that blocks CSS blur)
       var previewEl = document.getElementById('preview');
@@ -370,13 +372,23 @@
     document.getElementById('openBtn').addEventListener('click', function() {
       if (!sdk || !svgBase64) return;
       document.querySelector('.container').classList.add('opening');
+      // Also apply blur directly to #preview — belt-and-suspenders in case its compositor layer escapes the parent filter
+      var previewEl = document.getElementById('preview');
+      previewEl.style.filter  = 'blur(7px)';
+      previewEl.style.opacity = '0.45';
       var btn = document.getElementById('openBtn');
       btn.disabled = true;
       btn.textContent = 'Opening…';
 
+      function resetBlur() {
+        document.querySelector('.container').classList.remove('opening');
+        previewEl.style.filter  = '';
+        previewEl.style.opacity = '';
+      }
+
       var assetConfig = { type: 'image', dataType: 'base64', data: svgBase64 };
       var callbacks = {
-        onCancel:  function() { btn.disabled = false; btn.textContent = 'Open in Adobe Express  →'; document.querySelector('.container').classList.remove('opening'); },
+        onCancel:  function() { btn.disabled = false; btn.textContent = 'Open in Adobe Express  →'; resetBlur(); },
         onPublish: function(_intent, publishParams) {
           if (publishParams && publishParams.asset && publishParams.asset[0]) {
             var a = document.createElement('a');
@@ -389,7 +401,7 @@
         onError: function(err) {
           btn.disabled = false;
           btn.textContent = 'Open in Adobe Express  →';
-          document.querySelector('.container').classList.remove('opening');
+          resetBlur();
           showError('Express error:\n' + JSON.stringify(err, null, 2));
         }
       };
