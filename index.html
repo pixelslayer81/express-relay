@@ -271,7 +271,8 @@
     var CLIENT_ID = 'ec9582dbc1ec4f089f0cba29bc26c401';
     var APP_NAME  = 'Microsoft Social Templates';
 
-    var jpegDataUri = null;
+    var jpegDataUri = null;  // preview only
+    var svgBase64   = null;  // passed to createWithAsset — preserves layers + editable text
     var sdk = null;
 
     // Parse URL params
@@ -343,6 +344,10 @@
         return;
       }
 
+      // Store original SVG for Express — preserves text layers and editability
+      svgBase64 = hash;
+
+      // Convert to JPEG for preview thumbnail only
       try {
         jpegDataUri = await svgToJpegDataUri(hash);
       } catch(e) {
@@ -376,13 +381,14 @@
     }
 
     document.getElementById('openBtn').addEventListener('click', function() {
-      if (!sdk || !jpegDataUri) return;
+      if (!sdk || !svgBase64) return;
       document.querySelector('.container').classList.add('opening');
       var btn = document.getElementById('openBtn');
       btn.disabled = true;
       btn.textContent = 'Opening…';
 
-      var assetConfig = { type: 'image', dataType: 'base64', data: jpegDataUri };
+      // Pass SVG directly — preserves text layers and editability in Adobe Express
+      var assetConfig = { type: 'image', dataType: 'base64', data: svgBase64 };
       var callbacks = {
         onCancel:  function() { btn.disabled = false; btn.textContent = 'Open in Adobe Express  →'; document.querySelector('.container').classList.remove('opening'); },
         onPublish: function(_intent, publishParams) {
