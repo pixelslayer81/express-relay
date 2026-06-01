@@ -353,16 +353,22 @@
 
     function blurPage() {
       document.getElementById('blur-overlay').classList.add('active');
-      var pc = document.querySelector('.preview-card');
-      pc.style.transition = 'filter 2.4s ease, opacity 2.4s ease';
-      pc.style.filter = 'blur(7px)';
-      pc.style.opacity = '0.45';
+      ['#preview', '.preview-card', '.preview-meta'].forEach(function(sel) {
+        var el = document.querySelector(sel);
+        if (!el) return;
+        el.style.transition = 'filter 2.4s ease, opacity 2.4s ease';
+        el.style.filter = 'blur(7px)';
+        el.style.opacity = '0.45';
+      });
     }
     function unblurPage() {
       document.getElementById('blur-overlay').classList.remove('active');
-      var pc = document.querySelector('.preview-card');
-      pc.style.filter = '';
-      pc.style.opacity = '';
+      ['#preview', '.preview-card', '.preview-meta'].forEach(function(sel) {
+        var el = document.querySelector(sel);
+        if (!el) return;
+        el.style.filter = '';
+        el.style.opacity = '';
+      });
     }
 
     document.getElementById('openBtn').addEventListener('click', function() {
