@@ -299,25 +299,8 @@
       try { hash = decodeURIComponent(raw); } catch(e) { hash = raw; }
 
       if (!hash) {
-        // No data in URL hash — request from plugin UI via postMessage
-        setStep('Waiting for template data…');
-        hash = await new Promise(function(resolve, reject) {
-          var timer = setTimeout(function() {
-            reject(new Error('No template data received.\n\nOpen this page via the Figma plugin "Export & Open in Adobe Express" button.'));
-          }, 30000);
-          window.addEventListener('message', function handler(e) {
-            if (e.data && e.data.type === 'msTemplateData' && typeof e.data.svgBase64 === 'string') {
-              clearTimeout(timer);
-              window.removeEventListener('message', handler);
-              resolve(e.data.svgBase64);
-            }
-          });
-          // Signal to the plugin UI that this page is ready to receive data
-          if (window.opener) {
-            window.opener.postMessage({ type: 'msRelayReady' }, '*');
-          }
-        }).catch(function(err) { showError(err.message); return null; });
-        if (!hash) return;
+        showError('No template data in URL.\n\nOpen this page via the Figma plugin "Export & Open in Adobe Express" button.');
+        return;
       }
 
       svgBase64  = hash;
