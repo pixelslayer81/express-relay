@@ -256,7 +256,8 @@
     var CLIENT_ID = 'ec9582dbc1ec4f089f0cba29bc26c401';
     var APP_NAME  = 'Microsoft Social Templates';
 
-    var svgBase64 = null;
+    var svgBase64  = null;
+    var svgDataUri = null;
     var sdk = null;
 
     // Parse URL params
@@ -272,6 +273,8 @@
       : '—';
     var dimsMap = { '1:1': '1080 × 1080', '4:5': '1080 × 1350', '16:9': '1920 × 1080' };
     var dims = dimsMap[paramFormat] || paramFormat;
+    var canvasDimsMap = { '1:1': { width: 1080, height: 1080 }, '4:5': { width: 1080, height: 1350 }, '16:9': { width: 1920, height: 1080 } };
+    var canvasDims = canvasDimsMap[paramFormat] || { width: 1080, height: 1080 };
     var dimsLine = (paramLayout ? paramLayout + ' · ' : '') + dims + (paramMode ? ' · ' + paramMode + ' mode' : '');
     var ctaLine  = paramCta ? 'CTA button ' + paramCta : '';
 
@@ -299,14 +302,34 @@
         return;
       }
 
-      // PNG from Figma — set directly as preview and send unmodified to Express.
-      svgBase64 = hash;
+      svgBase64  = hash;
+      svgDataUri = 'data:image/svg+xml;base64,' + hash;
+
+      // Render SVG preview via canvas (falls back to SVG data URI if tainted)
       var previewEl = document.getElementById('preview');
-      previewEl.onload = function() {
+      var svgImg = new Image();
+      svgImg.onload = function() {
+        var w = svgImg.naturalWidth  || canvasDims.width;
+        var h = svgImg.naturalHeight || canvasDims.height;
+        var scale = Math.min(1, 520 / Math.max(w, h));
+        var cvs = document.createElement('canvas');
+        cvs.width  = Math.round(w * scale);
+        cvs.height = Math.round(h * scale);
+        try {
+          cvs.getContext('2d').drawImage(svgImg, 0, 0, cvs.width, cvs.height);
+          previewEl.src = cvs.toDataURL('image/png');
+        } catch(e) {
+          previewEl.src = svgDataUri;
+        }
         previewEl.style.display = 'block';
         document.getElementById('spinner').style.display = 'none';
       };
-      previewEl.src = 'data:image/png;base64,' + hash;
+      svgImg.onerror = function() {
+        previewEl.src = svgDataUri;
+        previewEl.style.display = 'block';
+        document.getElementById('spinner').style.display = 'none';
+      };
+      svgImg.src = svgDataUri;
 
       setStep('Initializing Adobe Express…');
       if (typeof CCEverywhere === 'undefined') {
@@ -361,7 +384,7 @@
 
       setTimeout(function() {
         sdk.editor.createWithAsset(
-          { asset: assetConfig },
+          { asset: assetConfig, canvasSize: { width: canvasDims.width, height: canvasDims.height, unit: 'px' } },
           { callbacks: callbacks },
           exportConfig
         );
