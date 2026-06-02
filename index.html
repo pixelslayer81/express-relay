@@ -388,14 +388,15 @@
       btn.disabled = true;
       btn.textContent = 'Opening…';
 
-      // Apply blur + dim via direct inline style — no class toggle, no transition dependency.
-      // will-change:filter (set in CSS) pre-promotes the container so filter renders immediately.
-      container.style.filter  = 'blur(20px)';
-      container.style.opacity = '0.4';
+      // DIAGNOSTIC: apply to body (not container) to rule out SDK overlay covering container.
+      // Also show the computed filter value in the button to confirm JS is setting it.
+      document.body.style.filter  = 'blur(20px)';
+      document.body.style.opacity = '0.4';
+      btn.textContent = 'filter=' + document.body.style.filter;
 
       function resetBlur() {
-        container.style.filter  = '';
-        container.style.opacity = '';
+        document.body.style.filter  = '';
+        document.body.style.opacity = '';
         btn.disabled = false;
         btn.textContent = 'Open in Adobe Express  →';
       }
