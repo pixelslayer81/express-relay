@@ -190,6 +190,23 @@
     #openBtn:active:not(:disabled) { background: var(--accent); color: #fff; }
     #openBtn:disabled { opacity: 0.45; cursor: default; }
 
+    /* ── Blur overlay ── */
+    #blur-overlay {
+      position: fixed;
+      inset: 0;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: rgba(0, 0, 0, 0.18);
+      z-index: 5000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease;
+    }
+    #blur-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
     /* ── Error ── */
     #errMsg {
       display: none;
@@ -252,6 +269,9 @@
 
   </div>
 
+  <!-- Blur overlay — sits above page, below Express modal -->
+  <div id="blur-overlay"></div>
+
   <script>
     var CLIENT_ID = 'ec9582dbc1ec4f089f0cba29bc26c401';
     var APP_NAME  = 'Microsoft Social Templates';
@@ -283,6 +303,8 @@
     document.getElementById('metaCta').textContent  = ctaLine;
 
     function setStep(msg) { document.getElementById('step').textContent = msg; }
+    function showOverlay() { document.getElementById('blur-overlay').classList.add('active'); }
+    function hideOverlay() { document.getElementById('blur-overlay').classList.remove('active'); }
 
     function showError(msg) {
       document.getElementById('spinner').style.display = 'none';
@@ -358,16 +380,19 @@
       var btn = document.getElementById('openBtn');
       btn.disabled = true;
       btn.textContent = 'Opening…';
+      showOverlay();
 
       function reset() {
         btn.disabled = false;
         btn.textContent = 'Open in Adobe Express  →';
+        hideOverlay();
       }
 
       var assetConfig = { type: 'image', dataType: 'base64', data: svgBase64 };
       var callbacks = {
         onCancel:  function() { reset(); },
         onPublish: function(_intent, publishParams) {
+          hideOverlay();
           if (publishParams && publishParams.asset && publishParams.asset[0]) {
             var a = document.createElement('a');
             a.href = publishParams.asset[0].data;
