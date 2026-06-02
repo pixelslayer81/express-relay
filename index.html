@@ -299,7 +299,7 @@
       try { hash = decodeURIComponent(raw); } catch(e) { hash = raw; }
 
       if (!hash) {
-        // No data in URL hash — wait for postMessage from the plugin UI
+        // No data in URL hash — request from plugin UI via postMessage
         setStep('Waiting for template data…');
         hash = await new Promise(function(resolve, reject) {
           var timer = setTimeout(function() {
@@ -312,6 +312,10 @@
               resolve(e.data.svgBase64);
             }
           });
+          // Signal to the plugin UI that this page is ready to receive data
+          if (window.opener) {
+            window.opener.postMessage({ type: 'msRelayReady' }, '*');
+          }
         }).catch(function(err) { showError(err.message); return null; });
         if (!hash) return;
       }
