@@ -190,18 +190,6 @@
     #openBtn:active:not(:disabled) { background: var(--accent); color: #fff; }
     #openBtn:disabled { opacity: 0.45; cursor: default; }
 
-    /* ── Full-page blur overlay (shown while Express modal is open) ── */
-    #page-blur {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.25);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      z-index: 9999;
-      pointer-events: none;
-    }
-
     /* ── Error ── */
     #errMsg {
       display: none;
@@ -263,9 +251,6 @@
     </div>
 
   </div>
-
-  <!-- full-page blur while Express modal is open -->
-  <div id="page-blur"></div>
 
   <script>
     var CLIENT_ID = 'ec9582dbc1ec4f089f0cba29bc26c401';
@@ -400,20 +385,14 @@
       btn.disabled = true;
       btn.textContent = 'Opening…';
 
-      // Fixed full-page overlay with backdrop-filter blurs every element on the page
-      // (including GPU-composited images) without touching the Express modal which
-      // injects above this z-index.
-      document.getElementById('page-blur').style.display = 'block';
-
-      function resetBlur() {
-        document.getElementById('page-blur').style.display = 'none';
+      function reset() {
         btn.disabled = false;
         btn.textContent = 'Open in Adobe Express  →';
       }
 
       var assetConfig = { type: 'image', dataType: 'base64', data: svgBase64 };
       var callbacks = {
-        onCancel:  function() { resetBlur(); },
+        onCancel:  function() { reset(); },
         onPublish: function(_intent, publishParams) {
           if (publishParams && publishParams.asset && publishParams.asset[0]) {
             var a = document.createElement('a');
@@ -424,7 +403,7 @@
           window.close();
         },
         onError: function(err) {
-          resetBlur();
+          reset();
           showError('Express error:\n' + JSON.stringify(err, null, 2));
         }
       };
