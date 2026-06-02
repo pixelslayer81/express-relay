@@ -310,9 +310,9 @@
     // Canvas pixel dimensions
     var canvasDimsMap = { '1:1': { width: 1080, height: 1080 }, '4:5': { width: 1080, height: 1350 }, '16:9': { width: 1920, height: 1080 } };
     var canvasDims = canvasDimsMap[paramFormat] || { width: 1080, height: 1080 };
-    // Express operates at 300dpi; CSS pixels are 96dpi. Scale dimensions so the asset fills the canvas.
-    var exW = Math.round(canvasDims.width  * 300 / 96);
-    var exH = Math.round(canvasDims.height * 300 / 96);
+    // canvasSize must match the SVG's native pixel dimensions so the imported asset fills the canvas.
+    var exW = canvasDims.width;
+    var exH = canvasDims.height;
     // Sub-layout · dims · mode
     var dimsLine = (paramLayout ? paramLayout + ' · ' : '') + dims + (paramMode ? ' · ' + paramMode + ' mode' : '');
     var ctaLine  = paramCta ? 'CTA button ' + paramCta : '';
@@ -341,37 +341,8 @@
         return;
       }
 
-      // Scale SVG width/height to Express-native units (300dpi) using reliable regex replacement.
-      // DOMParser/XMLSerializer was silently failing on certain SVG content — regex on raw text is robust.
-      var processedBase64 = hash;
-      try {
-        var svgText = atob(hash);
-
-        // Replace or inject width on root <svg> element
-        if (/(<svg\b[^>]*)width="[^"]*"/.test(svgText)) {
-          svgText = svgText.replace(/(<svg\b[^>]*)width="[^"]*"/, '$1width="' + exW + '"');
-        } else {
-          svgText = svgText.replace(/(<svg\b)/, '$1 width="' + exW + '"');
-        }
-        // Replace or inject height on root <svg> element
-        if (/(<svg\b[^>]*)height="[^"]*"/.test(svgText)) {
-          svgText = svgText.replace(/(<svg\b[^>]*)height="[^"]*"/, '$1height="' + exH + '"');
-        } else {
-          svgText = svgText.replace(/(<svg\b)/, '$1 height="' + exH + '"');
-        }
-        // Ensure viewBox is present so content scales correctly
-        if (!/<svg\b[^>]*viewBox="[^"]*"/.test(svgText)) {
-          svgText = svgText.replace(/(<svg\b)/, '$1 viewBox="0 0 ' + canvasDims.width + ' ' + canvasDims.height + '"');
-        }
-
-        // Reliable UTF-8 → binary → base64 (avoids btoa(unescape(encodeURIComponent())) fragility)
-        var enc = new TextEncoder().encode(svgText);
-        var binary = '';
-        for (var i = 0; i < enc.length; i++) binary += String.fromCharCode(enc[i]);
-        processedBase64 = btoa(binary);
-      } catch(e) { /* use original hash on error */ }
-
-      svgBase64  = processedBase64;
+      // Pass SVG to Express unmodified — canvasSize matches SVG native px so the asset fills the canvas.
+      svgBase64  = hash;
       svgDataUri = 'data:image/svg+xml;base64,' + hash; // preview uses original px dims
 
       // Render SVG → canvas → PNG for preview (avoids GPU compositor layer that blocks CSS blur)
