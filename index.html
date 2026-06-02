@@ -302,15 +302,20 @@
         return;
       }
 
-      // Ensure SVG has a viewBox so Express can read its natural dimensions.
-      // No dimension scaling — Express derives canvas size from the SVG directly.
+      // Scale SVG 7x so it fills the Express canvas.
+      // viewBox stays at original dims so content scales correctly.
+      var scaledW = canvasDims.width  * 7;
+      var scaledH = canvasDims.height * 7;
       var processedBase64 = hash;
       try {
         var svgText = atob(hash);
+        // Ensure viewBox exists before changing width/height
         if (!/<svg\b[^>]*viewBox="[^"]*"/.test(svgText)) {
           svgText = svgText.replace(/(<svg\b)/, '$1 viewBox="0 0 ' + canvasDims.width + ' ' + canvasDims.height + '"');
-          processedBase64 = btoa(svgText);
         }
+        svgText = svgText.replace(/(<svg\b[^>]*)width="[^"]*"/, '$1width="' + scaledW + '"');
+        svgText = svgText.replace(/(<svg\b[^>]*)height="[^"]*"/, '$1height="' + scaledH + '"');
+        processedBase64 = btoa(svgText);
       } catch(e) { /* fallback to original */ }
 
       svgBase64  = processedBase64;
