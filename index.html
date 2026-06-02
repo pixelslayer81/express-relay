@@ -302,23 +302,9 @@
         return;
       }
 
-      // Scale SVG 7x so it fills the Express canvas.
-      // viewBox stays at original dims so content scales correctly.
-      var scaledW = canvasDims.width  * 7;
-      var scaledH = canvasDims.height * 7;
-      var processedBase64 = hash;
-      try {
-        var svgText = atob(hash);
-        // Ensure viewBox exists before changing width/height
-        if (!/<svg\b[^>]*viewBox="[^"]*"/.test(svgText)) {
-          svgText = svgText.replace(/(<svg\b)/, '$1 viewBox="0 0 ' + canvasDims.width + ' ' + canvasDims.height + '"');
-        }
-        svgText = svgText.replace(/(<svg\b[^>]*)width="[^"]*"/, '$1width="' + scaledW + '"');
-        svgText = svgText.replace(/(<svg\b[^>]*)height="[^"]*"/, '$1height="' + scaledH + '"');
-        processedBase64 = btoa(svgText);
-      } catch(e) { /* fallback to original */ }
-
-      svgBase64  = processedBase64;
+      // Send SVG exactly as exported — no dimension changes.
+      // Express canvas is 1080×1080, Figma template is 1080×1080, they match.
+      svgBase64  = hash;
       svgDataUri = 'data:image/svg+xml;base64,' + hash; // preview always uses original dims
 
       // Render preview: SVG → canvas → PNG. Falls back to SVG data URI if canvas is tainted.
