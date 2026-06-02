@@ -190,21 +190,18 @@
     #openBtn:active:not(:disabled) { background: var(--accent); color: #fff; }
     #openBtn:disabled { opacity: 0.45; cursor: default; }
 
-    /* ── Blur overlay ── */
-    #blur-overlay {
-      position: fixed;
-      inset: 0;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      background: rgba(0, 0, 0, 0.18);
-      z-index: 5000;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.35s ease;
+    /* ── Blur state ── */
+    .container {
+      transition: filter 0.35s ease, opacity 0.35s ease;
     }
-    #blur-overlay.active {
-      opacity: 1;
-      pointer-events: auto;
+    .container.blurred {
+      filter: blur(14px);
+      opacity: 0.55;
+      pointer-events: none;
+      user-select: none;
+    }
+    #preview {
+      transition: filter 0.35s ease;
     }
 
     /* ── Error ── */
@@ -269,9 +266,6 @@
 
   </div>
 
-  <!-- Blur overlay — sits above page, below Express modal -->
-  <div id="blur-overlay"></div>
-
   <script>
     var CLIENT_ID = 'ec9582dbc1ec4f089f0cba29bc26c401';
     var APP_NAME  = 'Microsoft Social Templates';
@@ -303,8 +297,16 @@
     document.getElementById('metaCta').textContent  = ctaLine;
 
     function setStep(msg) { document.getElementById('step').textContent = msg; }
-    function showOverlay() { document.getElementById('blur-overlay').classList.add('active'); }
-    function hideOverlay() { document.getElementById('blur-overlay').classList.remove('active'); }
+    function showOverlay() {
+      document.querySelector('.container').classList.add('blurred');
+      var img = document.getElementById('preview');
+      if (img) img.style.filter = 'blur(14px)';
+    }
+    function hideOverlay() {
+      document.querySelector('.container').classList.remove('blurred');
+      var img = document.getElementById('preview');
+      if (img) img.style.filter = '';
+    }
 
     function showError(msg) {
       document.getElementById('spinner').style.display = 'none';
