@@ -89,7 +89,7 @@
       color: var(--ink);
     }
 
-    /* ── Blur state ── */
+    /* ── Blur state (nav, hero, section text/labels) ── */
     .nav, .hero, .section {
       transition: filter 2.4s ease, opacity 2.4s ease;
     }
@@ -156,22 +156,9 @@
       width: 100%;
       height: auto;
       /* no border-radius — parent .preview-card clips it */
-    }
-
-    /* ── Preview blur overlay — uses backdrop-filter so it blurs even GPU-composited images ── */
-    #preview-blur-overlay {
-      position: absolute;
-      inset: 0;
-      backdrop-filter: blur(7px);
-      -webkit-backdrop-filter: blur(7px);
-      background: rgba(250, 250, 250, 0.45);
-      z-index: 5;
-      opacity: 0;
-      transition: opacity 2.4s ease;
-      pointer-events: none;
-    }
-    .opening #preview-blur-overlay {
-      opacity: 1;
+      /* blur(0px) initial state enables smooth animation to blur(7px) — cannot tween from 'none' */
+      filter: blur(0px);
+      transition: filter 2.4s ease, opacity 2.4s ease;
     }
 
     /* ── Template metadata ── */
@@ -264,7 +251,6 @@
         <div class="preview-card">
           <div id="spinner"></div>
           <img id="preview" alt="Template preview" />
-          <div id="preview-blur-overlay"></div>
         </div>
         <div class="preview-meta">
           <p class="meta-value" id="metaType">—</p>
@@ -289,7 +275,7 @@
     var APP_NAME  = 'Microsoft Social Templates';
 
     var svgDataUri = null;
-    var svgBase64  = null;   // raw base64, no data URI prefix — for createWithAsset
+    var svgBase64  = null;   // base64, no data URI prefix — for createWithAsset
     var sdk = null;
 
     // Parse URL params
@@ -307,12 +293,13 @@
     // Format → dimensions
     var dimsMap = { '1:1': '1080 × 1080', '4:5': '1080 × 1350', '16:9': '1920 × 1080' };
     var dims = dimsMap[paramFormat] || paramFormat;
-    // Canvas pixel dimensions
+    // Canvas pixel dimensions (CSS/SVG px)
     var canvasDimsMap = { '1:1': { width: 1080, height: 1080 }, '4:5': { width: 1080, height: 1350 }, '16:9': { width: 1920, height: 1080 } };
     var canvasDims = canvasDimsMap[paramFormat] || { width: 1080, height: 1080 };
-    // canvasSize must match the SVG's native pixel dimensions so the imported asset fills the canvas.
-    var exW = canvasDims.width;
-    var exH = canvasDims.height;
+    // Express operates at 300 dpi internally; SVG/CSS pixels are 96 dpi.
+    // Scale canvas and SVG dimensions by 300/96 so the imported asset fills the canvas.
+    var exW = Math.round(canvasDims.width  * 300 / 96);
+    var exH = Math.round(canvasDims.height * 300 / 96);
     // Sub-layout · dims · mode
     var dimsLine = (paramLayout ? paramLayout + ' · ' : '') + dims + (paramMode ? ' · ' + paramMode + ' mode' : '');
     var ctaLine  = paramCta ? 'CTA button ' + paramCta : '';
@@ -341,11 +328,38 @@
         return;
       }
 
-      // Pass SVG to Express unmodified — canvasSize matches SVG native px so the asset fills the canvas.
-      svgBase64  = hash;
+      // Scale SVG width/height to match the Express 300dpi canvas (exW × exH).
+      // Uses regex on the raw SVG text — more reliable than DOMParser/XMLSerializer.
+      // Re-encodes with btoa() directly (binary string safe; avoids TextEncoder corruption).
+      var processedBase64 = hash;
+      try {
+        var svgText = atob(hash);
+
+        // Replace or inject width on root <svg> element
+        if (/(<svg\b[^>]*)width="[^"]*"/.test(svgText)) {
+          svgText = svgText.replace(/(<svg\b[^>]*)width="[^"]*"/, '$1width="' + exW + '"');
+        } else {
+          svgText = svgText.replace(/(<svg\b)/, '$1 width="' + exW + '"');
+        }
+        // Replace or inject height on root <svg> element
+        if (/(<svg\b[^>]*)height="[^"]*"/.test(svgText)) {
+          svgText = svgText.replace(/(<svg\b[^>]*)height="[^"]*"/, '$1height="' + exH + '"');
+        } else {
+          svgText = svgText.replace(/(<svg\b)/, '$1 height="' + exH + '"');
+        }
+        // Ensure viewBox is set so content fills correctly
+        if (!/<svg\b[^>]*viewBox="[^"]*"/.test(svgText)) {
+          svgText = svgText.replace(/(<svg\b)/, '$1 viewBox="0 0 ' + canvasDims.width + ' ' + canvasDims.height + '"');
+        }
+
+        // btoa() is correct for binary strings (all chars 0–255 from atob()) — do NOT use TextEncoder here
+        processedBase64 = btoa(svgText);
+      } catch(e) { /* use original hash on error */ }
+
+      svgBase64  = processedBase64;
       svgDataUri = 'data:image/svg+xml;base64,' + hash; // preview uses original px dims
 
-      // Render SVG → canvas → PNG for preview (avoids GPU compositor layer that blocks CSS blur)
+      // Render SVG → canvas → PNG for preview
       var previewEl = document.getElementById('preview');
       var svgImg = new Image();
       svgImg.onload = function() {
@@ -389,14 +403,23 @@
 
     document.getElementById('openBtn').addEventListener('click', function() {
       if (!sdk || !svgBase64) return;
-      // Add .opening class — CSS transitions blur/dim nav, hero, sections, and #preview-blur-overlay
+
+      // Blur the page — CSS handles nav/hero/section; filter applied directly to #preview
+      // because the img may be on its own GPU compositor layer that escapes ancestor filter.
+      // Initial CSS filter: blur(0px) enables smooth animation (cannot tween from 'none').
       document.querySelector('.container').classList.add('opening');
+      var previewEl = document.getElementById('preview');
+      previewEl.style.filter  = 'blur(7px)';
+      previewEl.style.opacity = '0.45';
+
       var btn = document.getElementById('openBtn');
       btn.disabled = true;
       btn.textContent = 'Opening…';
 
       function resetBlur() {
         document.querySelector('.container').classList.remove('opening');
+        previewEl.style.filter  = 'blur(0px)';
+        previewEl.style.opacity = '1';
         btn.disabled = false;
         btn.textContent = 'Open in Adobe Express  →';
       }
