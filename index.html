@@ -33,16 +33,11 @@
     }
 
     .container {
+      position: relative;
       width: 100%;
       max-width: 780px;
       padding: 250px 40px 80px;
-    }
-
-    /* Blur + dim the entire container when Express is opening.
-       No overlay needed — filter and opacity applied directly to the container. */
-    .container.opening {
-      filter: blur(8px);
-      opacity: 0.45;
+      will-change: filter;
     }
 
     /* ── Nav ── */
@@ -393,11 +388,14 @@
       btn.disabled = true;
       btn.textContent = 'Opening…';
 
-      // Blur + dim the container. Express modal is injected outside .container so it stays sharp.
-      container.classList.add('opening');
+      // Apply blur + dim via direct inline style — no class toggle, no transition dependency.
+      // will-change:filter (set in CSS) pre-promotes the container so filter renders immediately.
+      container.style.filter  = 'blur(8px)';
+      container.style.opacity = '0.45';
 
       function resetBlur() {
-        container.classList.remove('opening');
+        container.style.filter  = '';
+        container.style.opacity = '';
         btn.disabled = false;
         btn.textContent = 'Open in Adobe Express  →';
       }
