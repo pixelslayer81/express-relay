@@ -38,24 +38,11 @@
       padding: 250px 40px 80px;
     }
 
-    /* ── Full-viewport dim overlay ──
-       Dark semi-transparent overlay. opacity 0→1 is the most reliable CSS transition.
-       Adobe Express modal sits above this at z-index ~2147483647. */
-    #blur-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(10, 10, 10, 0.6);
-      z-index: 500;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.6s ease;
-    }
-    #blur-overlay.visible {
-      opacity: 1;
-    }
-    /* Blur the page content behind the overlay */
+    /* Blur + dim the entire container when Express is opening.
+       No overlay needed — filter and opacity applied directly to the container. */
     .container.opening {
       filter: blur(8px);
+      opacity: 0.45;
     }
 
     /* ── Nav ── */
@@ -272,9 +259,6 @@
 
   </div>
 
-  <!-- Full-viewport blur overlay — shown when Express is opening, hidden on cancel/error -->
-  <div id="blur-overlay"></div>
-
   <script>
     var CLIENT_ID = 'ec9582dbc1ec4f089f0cba29bc26c401';
     var APP_NAME  = 'Microsoft Social Templates';
@@ -404,20 +388,15 @@
     document.getElementById('openBtn').addEventListener('click', function() {
       if (!sdk || !svgBase64) return;
 
-      var overlay    = document.getElementById('blur-overlay');
-      var container  = document.querySelector('.container');
-      var btn        = document.getElementById('openBtn');
+      var container = document.querySelector('.container');
+      var btn       = document.getElementById('openBtn');
       btn.disabled = true;
       btn.textContent = 'Opening…';
 
-      // Two-layer approach:
-      // 1. container.opening applies filter:blur to the page content
-      // 2. #blur-overlay fades in a dark semi-transparent dim on top
+      // Blur + dim the container. Express modal is injected outside .container so it stays sharp.
       container.classList.add('opening');
-      overlay.classList.add('visible');
 
       function resetBlur() {
-        overlay.classList.remove('visible');
         container.classList.remove('opening');
         btn.disabled = false;
         btn.textContent = 'Open in Adobe Express  →';
