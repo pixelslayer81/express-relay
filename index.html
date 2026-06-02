@@ -275,9 +275,6 @@
     var dims = dimsMap[paramFormat] || paramFormat;
     var canvasDimsMap = { '1:1': { width: 1080, height: 1080 }, '4:5': { width: 1080, height: 1350 }, '16:9': { width: 1920, height: 1080 } };
     var canvasDims = canvasDimsMap[paramFormat] || { width: 1080, height: 1080 };
-    // Scale to Express 300dpi space (from CSS 96dpi) so imported asset fills canvas
-    var exW = Math.round(canvasDims.width  * 300 / 96);
-    var exH = Math.round(canvasDims.height * 300 / 96);
     var dimsLine = (paramLayout ? paramLayout + ' · ' : '') + dims + (paramMode ? ' · ' + paramMode + ' mode' : '');
     var ctaLine  = paramCta ? 'CTA button ' + paramCta : '';
 
@@ -305,27 +302,16 @@
         return;
       }
 
-      // Scale SVG width/height to match Express 300dpi canvas (exW × exH).
-      // Regex on raw SVG text — avoids DOMParser/XMLSerializer fragility.
-      // btoa() on the binary string from atob() — correct; do NOT use TextEncoder.
+      // Ensure SVG has a viewBox so Express can read its natural dimensions.
+      // No dimension scaling — Express derives canvas size from the SVG directly.
       var processedBase64 = hash;
       try {
         var svgText = atob(hash);
-        if (/(<svg\b[^>]*)width="[^"]*"/.test(svgText)) {
-          svgText = svgText.replace(/(<svg\b[^>]*)width="[^"]*"/, '$1width="' + exW + '"');
-        } else {
-          svgText = svgText.replace(/(<svg\b)/, '$1 width="' + exW + '"');
-        }
-        if (/(<svg\b[^>]*)height="[^"]*"/.test(svgText)) {
-          svgText = svgText.replace(/(<svg\b[^>]*)height="[^"]*"/, '$1height="' + exH + '"');
-        } else {
-          svgText = svgText.replace(/(<svg\b)/, '$1 height="' + exH + '"');
-        }
         if (!/<svg\b[^>]*viewBox="[^"]*"/.test(svgText)) {
           svgText = svgText.replace(/(<svg\b)/, '$1 viewBox="0 0 ' + canvasDims.width + ' ' + canvasDims.height + '"');
+          processedBase64 = btoa(svgText);
         }
-        processedBase64 = btoa(svgText);
-      } catch(e) { /* fallback to original hash on any error */ }
+      } catch(e) { /* fallback to original */ }
 
       svgBase64  = processedBase64;
       svgDataUri = 'data:image/svg+xml;base64,' + hash; // preview always uses original dims
@@ -411,7 +397,7 @@
 
       setTimeout(function() {
         sdk.editor.createWithAsset(
-          { asset: assetConfig, canvasSize: { width: exW, height: exH, unit: 'px' } },
+          { asset: assetConfig },
           { callbacks: callbacks },
           exportConfig
         );
