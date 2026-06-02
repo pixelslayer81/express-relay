@@ -190,6 +190,18 @@
     #openBtn:active:not(:disabled) { background: var(--accent); color: #fff; }
     #openBtn:disabled { opacity: 0.45; cursor: default; }
 
+    /* ── Full-page blur overlay (shown while Express modal is open) ── */
+    #page-blur {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.25);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      z-index: 9999;
+      pointer-events: none;
+    }
+
     /* ── Error ── */
     #errMsg {
       display: none;
@@ -251,6 +263,9 @@
     </div>
 
   </div>
+
+  <!-- full-page blur while Express modal is open -->
+  <div id="page-blur"></div>
 
   <script>
     var CLIENT_ID = 'ec9582dbc1ec4f089f0cba29bc26c401';
@@ -381,45 +396,17 @@
     document.getElementById('openBtn').addEventListener('click', function() {
       if (!sdk || !svgBase64) return;
 
-      var container = document.querySelector('.container');
-      var btn       = document.getElementById('openBtn');
+      var btn = document.getElementById('openBtn');
       btn.disabled = true;
       btn.textContent = 'Opening…';
 
-      // Blur + dim page sections via CSS filter (works for text/labels/backgrounds).
-      // Express modal is injected into <body> by SDK — stays sharp.
-      var blurEls = document.querySelectorAll('.nav, .hero, .section');
-      for (var i = 0; i < blurEls.length; i++) {
-        blurEls[i].style.filter  = 'blur(8px)';
-        blurEls[i].style.opacity = '0.4';
-      }
-
-      // #preview is a raster img on its own GPU compositor layer — CSS filter can't reach it.
-      // Fix: redraw it onto a canvas with ctx.filter='blur()' to bake blur into the pixel data.
-      var previewEl  = document.getElementById('preview');
-      var origPreviewSrc = previewEl ? previewEl.src : null;
-      if (previewEl && previewEl.style.display !== 'none' && previewEl.src) {
-        try {
-          var blurCvs    = document.createElement('canvas');
-          blurCvs.width  = previewEl.naturalWidth  || 260;
-          blurCvs.height = previewEl.naturalHeight || 260;
-          var bCtx       = blurCvs.getContext('2d');
-          bCtx.filter    = 'blur(10px)';
-          bCtx.drawImage(previewEl, 0, 0, blurCvs.width, blurCvs.height);
-          previewEl.src  = blurCvs.toDataURL('image/png');
-        } catch(e) { /* tainted canvas — skip img blur */ }
-        previewEl.style.opacity = '0.4';
-      }
+      // Fixed full-page overlay with backdrop-filter blurs every element on the page
+      // (including GPU-composited images) without touching the Express modal which
+      // injects above this z-index.
+      document.getElementById('page-blur').style.display = 'block';
 
       function resetBlur() {
-        for (var i = 0; i < blurEls.length; i++) {
-          blurEls[i].style.filter  = '';
-          blurEls[i].style.opacity = '';
-        }
-        if (previewEl && origPreviewSrc) {
-          previewEl.src = origPreviewSrc;
-          previewEl.style.opacity = '';
-        }
+        document.getElementById('page-blur').style.display = 'none';
         btn.disabled = false;
         btn.textContent = 'Open in Adobe Express  →';
       }
