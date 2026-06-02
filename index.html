@@ -390,8 +390,8 @@
 
       // Apply blur + dim via direct inline style — no class toggle, no transition dependency.
       // will-change:filter (set in CSS) pre-promotes the container so filter renders immediately.
-      container.style.filter  = 'blur(8px)';
-      container.style.opacity = '0.45';
+      container.style.filter  = 'blur(20px)';
+      container.style.opacity = '0.4';
 
       function resetBlur() {
         container.style.filter  = '';
@@ -419,14 +419,14 @@
       };
       var exportConfig = [{ id: 'download', label: 'Download', action: { target: 'download' }, style: { uiType: 'button' } }];
 
-      // 700ms delay matches the overlay fade-in so blur is visible before Express appears
+      // DIAGNOSTIC: 3s delay — confirms blur is visible before Express opens
       setTimeout(function() {
         sdk.editor.createWithAsset(
           { asset: assetConfig, canvasSize: { width: exW, height: exH, unit: 'px' } },
           { callbacks: callbacks },
           exportConfig
         );
-      }, 700);
+      }, 3000);
     });
 
     var script = document.createElement('script');
