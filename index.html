@@ -33,11 +33,9 @@
     }
 
     .container {
-      position: relative;
       width: 100%;
       max-width: 780px;
       padding: 250px 40px 80px;
-      will-change: filter;
     }
 
     /* ── Nav ── */
@@ -388,15 +386,14 @@
       btn.disabled = true;
       btn.textContent = 'Opening…';
 
-      // DIAGNOSTIC: apply to body (not container) to rule out SDK overlay covering container.
-      // Also show the computed filter value in the button to confirm JS is setting it.
-      document.body.style.filter  = 'blur(20px)';
-      document.body.style.opacity = '0.4';
-      btn.textContent = 'filter=' + document.body.style.filter;
+      // Blur + dim the relay page. Applied to container so the Express modal (injected into
+      // <body> by the SDK, outside .container) is unaffected and stays sharp.
+      container.style.filter  = 'blur(8px)';
+      container.style.opacity = '0.4';
 
       function resetBlur() {
-        document.body.style.filter  = '';
-        document.body.style.opacity = '';
+        container.style.filter  = '';
+        container.style.opacity = '';
         btn.disabled = false;
         btn.textContent = 'Open in Adobe Express  →';
       }
@@ -420,14 +417,13 @@
       };
       var exportConfig = [{ id: 'download', label: 'Download', action: { target: 'download' }, style: { uiType: 'button' } }];
 
-      // DIAGNOSTIC: 3s delay — confirms blur is visible before Express opens
       setTimeout(function() {
         sdk.editor.createWithAsset(
           { asset: assetConfig, canvasSize: { width: exW, height: exH, unit: 'px' } },
           { callbacks: callbacks },
           exportConfig
         );
-      }, 3000);
+      }, 700);
     });
 
     var script = document.createElement('script');
