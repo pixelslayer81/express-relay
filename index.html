@@ -38,6 +38,26 @@
       padding: 250px 40px 80px;
     }
 
+    /* ── Full-viewport blur overlay ──
+       Sits above all page content (z-index 500).
+       backdrop-filter blurs everything behind it.
+       Adobe Express modal is injected at z-index ~2147483647 so it appears above this.
+       opacity transition is the most reliable CSS animation — no filter none→blur issues. */
+    #blur-overlay {
+      position: fixed;
+      inset: 0;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      background: rgba(250, 250, 250, 0.45);
+      z-index: 500;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.7s ease;
+    }
+    #blur-overlay.visible {
+      opacity: 1;
+    }
+
     /* ── Nav ── */
     .nav {
       display: flex;
@@ -252,6 +272,9 @@
 
   </div>
 
+  <!-- Full-viewport blur overlay — shown when Express is opening, hidden on cancel/error -->
+  <div id="blur-overlay"></div>
+
   <script>
     var CLIENT_ID = 'ec9582dbc1ec4f089f0cba29bc26c401';
     var APP_NAME  = 'Microsoft Social Templates';
@@ -381,32 +404,17 @@
     document.getElementById('openBtn').addEventListener('click', function() {
       if (!sdk || !svgBase64) return;
 
-      var container = document.querySelector('.container');
+      var overlay = document.getElementById('blur-overlay');
       var btn = document.getElementById('openBtn');
       btn.disabled = true;
       btn.textContent = 'Opening…';
 
-      // JS-driven blur so we control exactly when the animation starts.
-      // 1. Set transition:none and establish initial blur(0px) state.
-      // 2. Force a reflow so the browser registers the initial state.
-      // 3. Re-enable transition and set the target blur — browser animates from 0→7px.
-      // 4. Delay createWithAsset by 300ms so the blur renders before Express overlays the page.
-      container.style.transition = 'none';
-      container.style.filter     = 'blur(0px)';
-      container.style.opacity    = '1';
-      container.offsetHeight;                              // force reflow
-      container.style.transition = 'filter 2.4s ease, opacity 2.4s ease';
-      container.style.filter     = 'blur(7px)';
-      container.style.opacity    = '0.45';
+      // Show the full-viewport blur overlay — opacity 0→1 is the most reliable CSS transition.
+      // backdrop-filter on a fixed overlay blurs all page content behind it regardless of GPU layers.
+      overlay.classList.add('visible');
 
       function resetBlur() {
-        container.style.filter  = 'blur(0px)';
-        container.style.opacity = '1';
-        setTimeout(function() {
-          container.style.transition = '';
-          container.style.filter     = '';
-          container.style.opacity    = '';
-        }, 2500);
+        overlay.classList.remove('visible');
         btn.disabled = false;
         btn.textContent = 'Open in Adobe Express  →';
       }
@@ -430,14 +438,14 @@
       };
       var exportConfig = [{ id: 'download', label: 'Download', action: { target: 'download' }, style: { uiType: 'button' } }];
 
-      // Delay Express launch by 300ms so the blur animation is visible before the modal appears
+      // 700ms delay matches the overlay fade-in so blur is visible before Express appears
       setTimeout(function() {
         sdk.editor.createWithAsset(
           { asset: assetConfig, canvasSize: { width: exW, height: exH, unit: 'px' } },
           { callbacks: callbacks },
           exportConfig
         );
-      }, 300);
+      }, 700);
     });
 
     var script = document.createElement('script');
