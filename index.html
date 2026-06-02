@@ -386,14 +386,19 @@
       btn.disabled = true;
       btn.textContent = 'Opening…';
 
-      // Blur + dim the relay page. Applied to container so the Express modal (injected into
-      // <body> by the SDK, outside .container) is unaffected and stays sharp.
-      container.style.filter  = 'blur(8px)';
-      container.style.opacity = '0.4';
+      // Blur + dim every visible section of the relay page individually.
+      // Express modal is injected into <body> by the SDK — outside these elements — so it stays sharp.
+      var blurEls = document.querySelectorAll('.nav, .hero, .section, .preview-card, #preview');
+      for (var i = 0; i < blurEls.length; i++) {
+        blurEls[i].style.filter  = 'blur(8px)';
+        blurEls[i].style.opacity = '0.4';
+      }
 
       function resetBlur() {
-        container.style.filter  = '';
-        container.style.opacity = '';
+        for (var i = 0; i < blurEls.length; i++) {
+          blurEls[i].style.filter  = '';
+          blurEls[i].style.opacity = '';
+        }
         btn.disabled = false;
         btn.textContent = 'Open in Adobe Express  →';
       }
