@@ -32,18 +32,10 @@
       -moz-osx-font-smoothing: grayscale;
     }
 
-    /* Blur the entire container at once — catches all children including GPU-promoted img layers.
-       Initial state blur(0px) (not 'none') so the browser can tween between two blur() values. */
     .container {
       width: 100%;
       max-width: 780px;
       padding: 250px 40px 80px;
-      filter: blur(0px);
-      transition: filter 2.4s ease, opacity 2.4s ease;
-    }
-    .container.opening {
-      filter: blur(7px);
-      opacity: 0.45;
     }
 
     /* ── Nav ── */
@@ -389,18 +381,32 @@
     document.getElementById('openBtn').addEventListener('click', function() {
       if (!sdk || !svgBase64) return;
 
-      // Blur the entire container — catches all children including GPU-promoted img layers
-      // because filter on a direct compositing ancestor creates a boundary that includes promoted layers.
-      // The Adobe Express modal is injected outside .container so it is unaffected.
       var container = document.querySelector('.container');
-      container.classList.add('opening');
-
       var btn = document.getElementById('openBtn');
       btn.disabled = true;
       btn.textContent = 'Opening…';
 
+      // JS-driven blur so we control exactly when the animation starts.
+      // 1. Set transition:none and establish initial blur(0px) state.
+      // 2. Force a reflow so the browser registers the initial state.
+      // 3. Re-enable transition and set the target blur — browser animates from 0→7px.
+      // 4. Delay createWithAsset by 300ms so the blur renders before Express overlays the page.
+      container.style.transition = 'none';
+      container.style.filter     = 'blur(0px)';
+      container.style.opacity    = '1';
+      container.offsetHeight;                              // force reflow
+      container.style.transition = 'filter 2.4s ease, opacity 2.4s ease';
+      container.style.filter     = 'blur(7px)';
+      container.style.opacity    = '0.45';
+
       function resetBlur() {
-        container.classList.remove('opening');
+        container.style.filter  = 'blur(0px)';
+        container.style.opacity = '1';
+        setTimeout(function() {
+          container.style.transition = '';
+          container.style.filter     = '';
+          container.style.opacity    = '';
+        }, 2500);
         btn.disabled = false;
         btn.textContent = 'Open in Adobe Express  →';
       }
@@ -424,11 +430,14 @@
       };
       var exportConfig = [{ id: 'download', label: 'Download', action: { target: 'download' }, style: { uiType: 'button' } }];
 
-      sdk.editor.createWithAsset(
-        { asset: assetConfig, canvasSize: { width: exW, height: exH, unit: 'px' } },
-        { callbacks: callbacks },
-        exportConfig
-      );
+      // Delay Express launch by 300ms so the blur animation is visible before the modal appears
+      setTimeout(function() {
+        sdk.editor.createWithAsset(
+          { asset: assetConfig, canvasSize: { width: exW, height: exH, unit: 'px' } },
+          { callbacks: callbacks },
+          exportConfig
+        );
+      }, 300);
     });
 
     var script = document.createElement('script');
