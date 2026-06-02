@@ -386,18 +386,39 @@
       btn.disabled = true;
       btn.textContent = 'Opening…';
 
-      // Blur + dim every visible section of the relay page individually.
-      // Express modal is injected into <body> by the SDK — outside these elements — so it stays sharp.
-      var blurEls = document.querySelectorAll('.nav, .hero, .section, .preview-card, #preview');
+      // Blur + dim page sections via CSS filter (works for text/labels/backgrounds).
+      // Express modal is injected into <body> by SDK — stays sharp.
+      var blurEls = document.querySelectorAll('.nav, .hero, .section');
       for (var i = 0; i < blurEls.length; i++) {
         blurEls[i].style.filter  = 'blur(8px)';
         blurEls[i].style.opacity = '0.4';
+      }
+
+      // #preview is a raster img on its own GPU compositor layer — CSS filter can't reach it.
+      // Fix: redraw it onto a canvas with ctx.filter='blur()' to bake blur into the pixel data.
+      var previewEl  = document.getElementById('preview');
+      var origPreviewSrc = previewEl ? previewEl.src : null;
+      if (previewEl && previewEl.style.display !== 'none' && previewEl.src) {
+        try {
+          var blurCvs    = document.createElement('canvas');
+          blurCvs.width  = previewEl.naturalWidth  || 260;
+          blurCvs.height = previewEl.naturalHeight || 260;
+          var bCtx       = blurCvs.getContext('2d');
+          bCtx.filter    = 'blur(10px)';
+          bCtx.drawImage(previewEl, 0, 0, blurCvs.width, blurCvs.height);
+          previewEl.src  = blurCvs.toDataURL('image/png');
+        } catch(e) { /* tainted canvas — skip img blur */ }
+        previewEl.style.opacity = '0.4';
       }
 
       function resetBlur() {
         for (var i = 0; i < blurEls.length; i++) {
           blurEls[i].style.filter  = '';
           blurEls[i].style.opacity = '';
+        }
+        if (previewEl && origPreviewSrc) {
+          previewEl.src = origPreviewSrc;
+          previewEl.style.opacity = '';
         }
         btn.disabled = false;
         btn.textContent = 'Open in Adobe Express  →';
