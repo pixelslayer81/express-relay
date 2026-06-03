@@ -298,14 +298,35 @@
 
     function setStep(msg) { document.getElementById('step').textContent = msg; }
     function showOverlay() {
-      document.querySelector('.container').classList.add('blurred');
+      // Snapshot preview img → canvas so parent filter can reach it
       var img = document.getElementById('preview');
-      if (img) img.style.filter = 'blur(14px)';
+      if (img && img.style.display !== 'none' && img.naturalWidth > 0) {
+        var snap = document.createElement('canvas');
+        snap.id = 'preview-snap';
+        snap.width  = img.naturalWidth;
+        snap.height = img.naturalHeight;
+        snap.style.cssText = 'display:block;width:100%;height:auto;';
+        try {
+          snap.getContext('2d').drawImage(img, 0, 0);
+          img.parentNode.insertBefore(snap, img);
+          img.style.display = 'none';
+        } catch(e) {
+          // Cross-origin fallback: blur img directly
+          img.style.filter = 'blur(18px)';
+        }
+      }
+      document.querySelector('.container').classList.add('blurred');
     }
     function hideOverlay() {
+      var snap = document.getElementById('preview-snap');
+      var img  = document.getElementById('preview');
+      if (snap) {
+        if (img) { img.style.display = 'block'; img.style.filter = ''; }
+        snap.parentNode.removeChild(snap);
+      } else if (img) {
+        img.style.filter = '';
+      }
       document.querySelector('.container').classList.remove('blurred');
-      var img = document.getElementById('preview');
-      if (img) img.style.filter = '';
     }
 
     function showError(msg) {
