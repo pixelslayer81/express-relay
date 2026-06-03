@@ -190,20 +190,6 @@
     #openBtn:active:not(:disabled) { background: var(--accent); color: #fff; }
     #openBtn:disabled { opacity: 0.45; cursor: default; }
 
-    /* ── Blur state ── */
-    .container {
-      transition: filter 0.35s ease, opacity 0.35s ease;
-    }
-    .container.blurred {
-      filter: blur(14px);
-      opacity: 0.55;
-      pointer-events: none;
-      user-select: none;
-    }
-    #preview {
-      transition: filter 0.35s ease;
-    }
-
     /* ── Error ── */
     #errMsg {
       display: none;
@@ -297,36 +283,32 @@
     document.getElementById('metaCta').textContent  = ctaLine;
 
     function setStep(msg) { document.getElementById('step').textContent = msg; }
+    function blurEl(el, amt) {
+      if (!el) return;
+      el.style.filter    = 'blur(' + amt + 'px)';
+      el.style.opacity   = '0.45';
+      el.style.transition = 'filter 0.3s ease, opacity 0.3s ease';
+    }
+    function unblurEl(el) {
+      if (!el) return;
+      el.style.filter  = '';
+      el.style.opacity = '';
+    }
     function showOverlay() {
-      // Snapshot preview img → canvas so parent filter can reach it
-      var img = document.getElementById('preview');
-      if (img && img.style.display !== 'none' && img.naturalWidth > 0) {
-        var snap = document.createElement('canvas');
-        snap.id = 'preview-snap';
-        snap.width  = img.naturalWidth;
-        snap.height = img.naturalHeight;
-        snap.style.cssText = 'display:block;width:100%;height:auto;';
-        try {
-          snap.getContext('2d').drawImage(img, 0, 0);
-          img.parentNode.insertBefore(snap, img);
-          img.style.display = 'none';
-        } catch(e) {
-          // Cross-origin fallback: blur img directly
-          img.style.filter = 'blur(18px)';
-        }
-      }
-      document.querySelector('.container').classList.add('blurred');
+      var els = ['.nav', '.hero', '.section'];
+      els.forEach(function(sel) {
+        document.querySelectorAll(sel).forEach(function(el) { blurEl(el, 18); });
+      });
+      blurEl(document.getElementById('preview'), 18);
+      blurEl(document.querySelector('.preview-card'), 18);
     }
     function hideOverlay() {
-      var snap = document.getElementById('preview-snap');
-      var img  = document.getElementById('preview');
-      if (snap) {
-        if (img) { img.style.display = 'block'; img.style.filter = ''; }
-        snap.parentNode.removeChild(snap);
-      } else if (img) {
-        img.style.filter = '';
-      }
-      document.querySelector('.container').classList.remove('blurred');
+      var els = ['.nav', '.hero', '.section'];
+      els.forEach(function(sel) {
+        document.querySelectorAll(sel).forEach(function(el) { unblurEl(el); });
+      });
+      unblurEl(document.getElementById('preview'));
+      unblurEl(document.querySelector('.preview-card'));
     }
 
     function showError(msg) {
