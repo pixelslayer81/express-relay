@@ -146,6 +146,24 @@
       height: auto;
     }
 
+    /* ── Animate mode ── */
+    #replayBtn {
+      display: none;
+      margin-top: 12px;
+      padding: 10px 24px;
+      border: 1.5px solid var(--accent);
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--accent);
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    #replayBtn:hover { background: var(--accent); color: #fff; }
+
     /* ── Template metadata ── */
     .preview-meta {
       flex: 1;
@@ -239,6 +257,7 @@
           <p class="meta-sub" id="metaDims">—</p>
           <p class="meta-sub" id="metaCta">—</p>
           <p id="step"></p>
+          <button id="replayBtn">↺ &nbsp;Replay</button>
         </div>
       </div>
     </div>
@@ -253,7 +272,7 @@
   </div>
 
   <script>
-    var CLIENT_ID = 'ec9582dbc1ec4f089f0cba29bc26c401';
+    var CLIENT_ID = '75badb94c7414a7d814f4a7080425927';
     var APP_NAME  = 'Microsoft Social Templates';
 
     var svgBase64  = null;
@@ -267,6 +286,7 @@
     var paramMode   = urlParams.get('mode')   || '';
     var paramCta    = urlParams.get('cta')    || '';
     var paramLayout = urlParams.get('layout') || '';
+    var paramAnimate = urlParams.get('animate') === '1';
 
     var typeDisplay = paramType
       ? paramType.charAt(0).toUpperCase() + paramType.slice(1).toLowerCase() + ' layout.'
@@ -333,31 +353,52 @@
       svgBase64  = hash;
       svgDataUri = 'data:image/svg+xml;base64,' + hash;
 
-      // Render SVG preview via canvas (falls back to SVG data URI if tainted)
+      // Render SVG preview
       var previewEl = document.getElementById('preview');
-      var svgImg = new Image();
-      svgImg.onload = function() {
-        var w = svgImg.naturalWidth  || canvasDims.width;
-        var h = svgImg.naturalHeight || canvasDims.height;
-        var scale = Math.min(1, 520 / Math.max(w, h));
-        var cvs = document.createElement('canvas');
-        cvs.width  = Math.round(w * scale);
-        cvs.height = Math.round(h * scale);
-        try {
-          cvs.getContext('2d').drawImage(svgImg, 0, 0, cvs.width, cvs.height);
-          previewEl.src = cvs.toDataURL('image/png');
-        } catch(e) {
-          previewEl.src = svgDataUri;
-        }
-        previewEl.style.display = 'block';
-        document.getElementById('spinner').style.display = 'none';
-      };
-      svgImg.onerror = function() {
+
+      if (paramAnimate) {
+        // Animate mode: show SVG inline as <img> — CSS animations play natively
         previewEl.src = svgDataUri;
         previewEl.style.display = 'block';
         document.getElementById('spinner').style.display = 'none';
-      };
-      svgImg.src = svgDataUri;
+        document.getElementById('replayBtn').style.display = 'inline-block';
+
+        document.getElementById('replayBtn').addEventListener('click', function() {
+          previewEl.src = '';
+          requestAnimationFrame(function() { previewEl.src = svgDataUri; });
+        });
+      } else {
+        // Default mode: render to canvas (rasterised, no animation)
+        var svgImg = new Image();
+        svgImg.onload = function() {
+          var w = svgImg.naturalWidth  || canvasDims.width;
+          var h = svgImg.naturalHeight || canvasDims.height;
+          var scale = Math.min(1, 520 / Math.max(w, h));
+          var cvs = document.createElement('canvas');
+          cvs.width  = Math.round(w * scale);
+          cvs.height = Math.round(h * scale);
+          try {
+            cvs.getContext('2d').drawImage(svgImg, 0, 0, cvs.width, cvs.height);
+            previewEl.src = cvs.toDataURL('image/png');
+          } catch(e) {
+            previewEl.src = svgDataUri;
+          }
+          previewEl.style.display = 'block';
+          document.getElementById('spinner').style.display = 'none';
+        };
+        svgImg.onerror = function() {
+          previewEl.src = svgDataUri;
+          previewEl.style.display = 'block';
+          document.getElementById('spinner').style.display = 'none';
+        };
+        svgImg.src = svgDataUri;
+      }
+
+      // Animate-only mode: skip SDK init, no Express button needed
+      if (paramAnimate) {
+        document.getElementById('step').textContent = '';
+        return;
+      }
 
       setStep('Initializing Adobe Express…');
       if (typeof CCEverywhere === 'undefined') {
