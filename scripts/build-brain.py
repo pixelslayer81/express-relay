@@ -49,8 +49,8 @@ def _load(path):
 
 
 def _write(name, data):
-    os.makedirs(OUT_DIR, exist_ok=True)
     out = os.path.join(OUT_DIR, name + ".json")
+    os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, "w", encoding="utf-8") as fh:
         json.dump(data, fh, ensure_ascii=False, separators=(",", ":"))
     print("  wrote brain/%s.json" % name)
@@ -82,6 +82,14 @@ def main(argv=None):
     _write("compliance", _load(os.path.join(src, "_template-guidance", "compliance.yaml")))
     _write("typography-scale", _load(os.path.join(src, "_shared", "typography.yaml")))
     _write("catalog", _load(os.path.join(src, "_shared", "template-catalog.yaml")))
+
+    # Geometry specs (already JSON) — the audit reads each node's intended role by position to
+    # check/auto-fix geometry templates (mono-type) precisely. Published under brain/templates/.
+    tdir = os.path.join(src, "_shared", "templates")
+    if os.path.isdir(tdir):
+        for fn in sorted(os.listdir(tdir)):
+            if fn.endswith(".json"):
+                _write(os.path.join("templates", fn[:-5]).replace("\\", "/"), _load(os.path.join(tdir, fn)))
 
     # Every brand dir that has a tokens.yaml (skip _shared).
     brands = []
